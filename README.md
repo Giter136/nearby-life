@@ -1,4 +1,4 @@
-# 黑马点评（hm-dianping）
+# Nearby Life（本地生活点评平台）
 
 一个本地生活 / 点评类平台的后端实现：手机号登录、商户浏览与 GEO 附近搜索、达人探店博客、
 点赞与关注 Feed 流、用户签到，以及基于 **Redis + Lua + Kafka** 的优惠券秒杀链路。
@@ -103,7 +103,7 @@ sequenceDiagram
 ## 目录结构
 
 ```
-DianPing/
+nearby-life/
  backend/                     Spring Boot 后端
     pom.xml
     src/main/
