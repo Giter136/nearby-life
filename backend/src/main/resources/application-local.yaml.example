@@ -1,0 +1,5 @@
+# 复制成 application-local.yaml 再填自己的值（application-local.yaml 已被 git 忽略）
+spring:
+  datasource:
+    username: root
+    password: 在这里填你本机的密码

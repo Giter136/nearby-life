@@ -1,0 +1,49 @@
+# ============================================================================
+#  hm-dianping（Spring Boot 后端）  目录级 .gitignore
+# ----------------------------------------------------------------------------
+#  作用范围：本目录及其子目录；路径相对【本文件】解析。
+#  仓库根还有一份 .gitignore，两份规则会叠加生效（越靠近文件的越优先）。
+#  本文件写成自给自足的，这样单独用 hm-dianping/ 当仓库根也一样管用。
+# ============================================================================
+
+# ---- Java / Maven 构建产物 ----
+target/
+build/
+*.class
+
+# Maven Wrapper 的 jar 要提交（本项目暂时没有 mvnw）
+!.mvn/wrapper/maven-wrapper.jar
+
+# JVM 崩溃转储
+hs_err_pid*
+
+# ---- IDE ----
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+.apt_generated
+.springBeans
+.sts4-cache
+
+# ---- 日志 ----
+logs/
+*.log
+
+# ---- 本机私有配置（数据库密码等别提交）----
+application-local.yaml
+application-local.yml
+application-local.properties
+*-local.yaml
+*-local.yml
+*-local.properties
+
+# ---- 操作系统垃圾 ----
+.DS_Store
+Thumbs.db
