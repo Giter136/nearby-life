@@ -13,7 +13,6 @@ public class KafkaConfig {
     @Bean
     public NewTopic topic1(){
         return TopicBuilder.name(TOPIC_NAME_VOUCHER_ORDER)
-                .compact()
                 .build();
     }
 }

@@ -80,9 +80,9 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         OrderDTO order = new OrderDTO();
         order.setUserId(id);
         order.setVoucherId(voucherId);
-        long orderId = redisIdWorker.nextId(ORDER_PREFIX);
+        Long orderId = redisIdWorker.nextId(ORDER_PREFIX);
         order.setOrderId(orderId);
-        kafkaTemplate.send("voucher_order",id.toString(), JSONUtil.toJsonStr(order));
+        kafkaTemplate.send("voucher_order",orderId.toString(), JSONUtil.toJsonStr(order));
 //        long orderId = redisIdWorker.nextId("order");
         return Result.ok(orderId);
     }
