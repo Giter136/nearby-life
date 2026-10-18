@@ -3,144 +3,156 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>商户详情 — 黑马点评 · 城市生活志</title>
+  <title>商户详情 · 黑马点评</title>
   <meta name="description" content="商户详情、营业信息与限时代金券。">
   <link rel="icon" href="./favicon.ico">
   <link rel="stylesheet" href="./css/site.css">
 </head>
 <body>
 <div id="app" v-cloak>
-  <site-header></site-header>
+  <site-header active="shops"></site-header>
 
-  <main class="page page--tight">
+  <main class="page page--compact">
     <div class="shell">
-      <nav class="crumbs" aria-label="面包屑">
+      <nav class="breadcrumb" aria-label="面包屑">
         <a href="/">首页</a>
-        <span class="crumbs__sep">/</span>
+        <span>/</span>
         <span>商户</span>
-        <span class="crumbs__sep">/</span>
-        <span>{{ shop.name || '详情' }}</span>
+        <span>/</span>
+        <span aria-current="page">{{ shop.name || '详情' }}</span>
       </nav>
 
       <loading-rule v-if="loading" text="正在读取商户"></loading-rule>
 
-      <empty-state v-if="!loading && !shop.id" title="没有找到这家商户" hint="它可能已经下线，或者链接已经失效。">
-        <a class="btn btn--sm" href="/">回到首页</a>
-      </empty-state>
+      <template v-if="!loading && !shop.id">
+        <h1 class="sr-only">商户详情</h1>
+        <empty-state title="没有找到这家商户" hint="它可能已经下线，或者链接已经失效。" kicker="NOT FOUND">
+          <a class="btn btn--sm btn--primary" href="/">回到首页</a>
+        </empty-state>
+      </template>
 
-      <section class="detail" v-if="shop.id" v-reveal="0">
-        <div class="detail__gallery">
-          <div class="gallery__main">
-            <img :src="activeImage" :alt="shop.name" @error="imgFallback">
+      <section class="product-hero" v-if="shop.id">
+        <div class="detail-gallery">
+          <div class="gallery">
+            <div class="gallery__main">
+              <img :src="activeImage" :alt="shop.name" @error="imgFallback">
+            </div>
+            <div class="gallery__thumbs" v-if="images.length > 1">
+              <button
+                class="gallery__thumb"
+                type="button"
+                v-for="(img, i) in images"
+                :key="i"
+                :class="{ 'is-active': i === active }"
+                @click="active = i"
+                :aria-label="'查看第 ' + (i + 1) + ' 张图'"
+              >
+                <img :src="img" :alt="shop.name + ' 第' + (i + 1) + '张'" @error="imgFallback">
+              </button>
+            </div>
           </div>
           <p class="figcap">
-            <span class="figcap__no">FIG.{{ pad(active + 1) }}</span>
+            <span class="figcap__no mono">FIG.{{ pad(active + 1) }}</span>
             <span>商户实拍 · {{ shop.area || '商圈未标注' }} / 共 {{ images.length }} 张</span>
           </p>
-          <div class="gallery__thumbs" v-if="images.length > 1">
-            <button
-              class="gallery__thumb"
-              type="button"
-              v-for="(img, i) in images"
-              :key="i"
-              :class="{ 'is-active': i === active }"
-              @click="active = i"
-              :aria-label="'查看第 ' + (i + 1) + ' 张图'"
-            >
-              <img :src="img" :alt="shop.name + ' 第' + (i + 1) + '张'" @error="imgFallback">
-            </button>
-          </div>
         </div>
 
-        <div class="detail__info">
-          <span class="kicker detail__kicker">MERCHANT · 商户档案</span>
-          <h1 class="detail__title">{{ shop.name }}</h1>
-          <div class="detail__meta">
+        <div class="product-info">
+          <p class="eyebrow">MERCHANT / 商户档案</p>
+          <h1>{{ shop.name }}</h1>
+          <div class="product-info__meta">
             <star-rating :value="(shop.score || 0) / 10" show-score :size="15"></star-rating>
             <span class="mono">{{ shop.comments || 0 }} 条评价</span>
             <span class="meta-dot" aria-hidden="true"></span>
             <span class="mono">{{ shop.sold || 0 }} 已售</span>
           </div>
+          <p class="product-info__desc">{{ shop.openHours ? '营业时间 ' + shop.openHours + '。' : '' }}人均约 ¥{{ shop.avgPrice || 0 }}，位于{{ shop.area || '杭州' }}。到店前请以门店现场信息为准。</p>
 
-          <div class="facts">
-            <div class="fact">
-              <p class="fact__label">人均消费</p>
-              <p class="fact__value mono">¥{{ shop.avgPrice || 0 }}</p>
-            </div>
-            <div class="fact">
-              <p class="fact__label">所在区域</p>
-              <p class="fact__value">{{ shop.area || '商圈未标注' }}</p>
-            </div>
-            <div class="fact">
-              <p class="fact__label">营业时间</p>
-              <p class="fact__value">{{ shop.openHours || '以门店公告为准' }}</p>
-            </div>
-            <div class="fact" v-if="distanceText">
-              <p class="fact__label">距你</p>
-              <p class="fact__value mono">{{ distanceText }}</p>
-            </div>
-            <div class="fact" style="grid-column: 1 / -1">
-              <p class="fact__label">门店地址</p>
-              <p class="fact__value" style="display:flex;gap:8px;align-items:flex-start">
-                <app-icon name="pin" :size="14"></app-icon>
-                <span>{{ shop.address || '暂无地址' }}</span>
-              </p>
-            </div>
-            <div class="fact" style="grid-column: 1 / -1">
-              <p class="fact__label">地理坐标</p>
-              <p class="fact__value mono">N {{ util.coord(shop.y) }} · E {{ util.coord(shop.x) }}</p>
-            </div>
-          </div>
-
-          <div class="detail__cta">
+          <div class="product-info__actions">
             <a class="btn btn--primary" href="#vouchers">
               <app-icon name="ticket" :size="15"></app-icon>查看代金券
             </a>
-            <button class="btn btn--ghost" type="button" @click="goBack">返回</button>
+            <button class="btn btn--secondary" type="button" @click="goBack">返回上一页</button>
+          </div>
+
+          <div class="info-list">
+            <div class="info-list__row">
+              <span class="info-list__label">地址</span>
+              <span class="info-list__value">{{ shop.address || '暂无地址' }}</span>
+            </div>
+            <div class="info-list__row">
+              <span class="info-list__label">营业</span>
+              <span class="info-list__value">{{ shop.openHours || '以门店公告为准' }}</span>
+            </div>
+            <div class="info-list__row">
+              <span class="info-list__label">坐标</span>
+              <span class="info-list__value mono">N {{ util.coord(shop.y) }} · E {{ util.coord(shop.x) }}</span>
+            </div>
           </div>
         </div>
       </section>
 
-      <section class="tickets" id="vouchers" v-if="shop.id">
-        <header class="section-head">
-          <h2>代金券</h2>
-          <span class="section-head__note">VOUCHERS / 到店核销</span>
-          <span class="section-head__rule" aria-hidden="true"></span>
-          <span class="section-head__count mono">{{ pad(validVouchers.length) }}</span>
+      <div class="facts-panel" v-if="shop.id">
+        <div class="fact">
+          <p class="fact__label">人均消费</p>
+          <p class="fact__value mono">¥{{ shop.avgPrice || 0 }}</p>
+        </div>
+        <div class="fact">
+          <p class="fact__label">所在区域</p>
+          <p class="fact__value">{{ shop.area || '商圈未标注' }}</p>
+        </div>
+        <div class="fact">
+          <p class="fact__label">营业时间</p>
+          <p class="fact__value">{{ shop.openHours || '以门店公告为准' }}</p>
+        </div>
+        <div class="fact">
+          <p class="fact__label">销量 / 评价</p>
+          <p class="fact__value mono">{{ shop.sold || 0 }} 已售 · {{ shop.comments || 0 }} 条</p>
+        </div>
+      </div>
+
+      <section class="voucher-section" id="vouchers" v-if="shop.id">
+        <header class="section-head" style="margin-bottom: 0;">
+          <div class="section-head__copy">
+            <span class="eyebrow">VOUCHERS / 到店核销</span>
+            <h2>代金券</h2>
+            <p>券面价格、库存和有效期都来自商户接口。秒杀券需要登录后抢购。</p>
+          </div>
+          <span class="section-head__aside mono">{{ pad(validVouchers.length) }} 张</span>
         </header>
 
-        <div class="ticket-list" v-if="validVouchers.length">
-          <article class="ticket" v-for="v in validVouchers" :key="v.id" v-reveal="40">
-            <div class="ticket__main">
-              <span class="ticket__label">{{ v.type ? '限时秒杀 · SECKILL' : '代金券 · VOUCHER' }}</span>
-              <h3 class="ticket__title">{{ v.title }}</h3>
-              <p class="ticket__sub">{{ v.subTitle }}</p>
-              <div class="ticket__rules">
+        <div class="voucher-grid" v-if="validVouchers.length">
+          <article class="voucher" v-for="v in validVouchers" :key="v.id" v-reveal="40">
+            <div class="voucher__main">
+              <span class="voucher__label">{{ v.type ? '限时秒杀 · SECKILL' : '代金券 · VOUCHER' }}</span>
+              <h3 class="voucher__title">{{ v.title }}</h3>
+              <p class="voucher__sub">{{ v.subTitle }}</p>
+              <div class="voucher__rules">
                 <span v-for="(r, i) in ruleLines(v)" :key="i">{{ r }}</span>
               </div>
             </div>
-            <div class="ticket__stub">
-              <p class="ticket__price"><small>¥</small>{{ util.formatPrice(v.payValue) }}</p>
-              <p class="ticket__was" v-if="v.actualValue">原价 ¥{{ util.formatPrice(v.actualValue) }}</p>
-              <span class="ticket__discount" v-if="util.discount(v.payValue, v.actualValue)">{{ util.discount(v.payValue, v.actualValue) }}</span>
+            <div class="voucher__stub">
+              <p class="voucher__price"><small>¥</small>{{ util.formatPrice(v.payValue) }}</p>
+              <p class="voucher__was" v-if="v.actualValue">原价 ¥{{ util.formatPrice(v.actualValue) }}</p>
+              <span class="voucher__discount" v-if="util.discount(v.payValue, v.actualValue)">{{ util.discount(v.payValue, v.actualValue) }}</span>
 
               <template v-if="v.type">
                 <button class="btn btn--primary" type="button" :disabled="!canSeckill(v)" @click="seckill(v)">
                   {{ buttonText(v) }}
                 </button>
-                <p class="ticket__stock">余 <strong class="mono">{{ v.stock }}</strong> 张</p>
-                <p class="ticket__state mono">{{ util.voucherWindow(v.beginTime, v.endTime) }}</p>
+                <p class="voucher__stock">余 <strong class="mono">{{ v.stock }}</strong> 张</p>
+                <p class="voucher__state mono">{{ util.voucherWindow(v.beginTime, v.endTime) }}</p>
               </template>
               <template v-else>
-                <p class="ticket__state">到店出示 · 门店核销</p>
+                <p class="voucher__state">到店出示 · 门店核销</p>
               </template>
             </div>
           </article>
         </div>
 
-        <empty-state v-else-if="ready" title="暂无可用代金券" hint="这家店暂时没有上架优惠。"></empty-state>
+        <empty-state v-else-if="ready" title="暂无可用代金券" hint="这家店暂时没有上架优惠。" kicker="NO VOUCHERS"></empty-state>
 
-        <p class="detail__note">券面价格与有效期来自商户接口，下单前请以门店现场规则为准。演示项目，不产生真实交易。</p>
+        <p class="detail-note">券面价格与有效期来自商户接口，下单前请以门店现场规则为准。演示项目，不产生真实交易。</p>
       </section>
     </div>
   </main>
@@ -174,7 +186,6 @@
         return util.distance(this.shop.distance);
       },
       validVouchers: function () {
-        var vm = this;
         return (this.vouchers || []).filter(function (v) {
           return util.isWithin(v.beginTime, v.endTime) !== 'after';
         });
@@ -194,7 +205,6 @@
       queryShopById: function (shopId) {
         var vm = this;
         vm.loading = true;
-        // 与旧版一致：GET /shop/{id}
         api.shop(shopId)
           .then(function (data) {
             vm.shop = data || {};
@@ -205,7 +215,6 @@
       },
       queryVoucher: function (shopId) {
         var vm = this;
-        // 与旧版一致：GET /voucher/list/{shopId}
         api.vouchersOfShop(shopId)
           .then(function (list) {
             vm.vouchers = list || [];
@@ -251,7 +260,6 @@
           notify('库存不足，请刷新再试试', 'error');
           return;
         }
-        // 与旧版一致：POST /voucher-order/seckill/{id}
         api.seckill(v.id)
           .then(function (orderId) {
             notify('抢购成功，订单号 ' + orderId, 'success');

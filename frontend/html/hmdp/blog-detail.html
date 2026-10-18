@@ -1,185 +1,164 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>探店笔记 — 黑马点评 · 城市生活志</title>
+  <title>探店笔记 · 黑马点评</title>
   <meta name="description" content="一篇关于杭州街巷的探店笔记。">
   <link rel="icon" href="./favicon.ico">
   <link rel="stylesheet" href="./css/site.css">
 </head>
 <body>
 <div id="app" v-cloak>
-  <site-header></site-header>
+  <site-header active="hot"></site-header>
 
-  <main class="page page--tight">
+  <main class="page page--compact">
     <div class="shell">
-      <nav class="crumbs" aria-label="面包屑">
+      <nav class="breadcrumb" aria-label="面包屑">
         <a href="/">首页</a>
-        <span class="crumbs__sep">/</span>
+        <span>/</span>
         <span>探店笔记</span>
-        <span class="crumbs__sep">/</span>
-        <span>{{ shop.name || '记录' }}</span>
+        <span>/</span>
+        <span aria-current="page">{{ shop.name || '笔记' }}</span>
       </nav>
 
       <loading-rule v-if="loading" text="正在展开笔记"></loading-rule>
 
-      <div class="article" v-if="blog.id">
-        <article class="article__main" v-reveal="0">
-          <header class="article__head">
-            <div class="article__kicker">
-              <span class="kicker">NOTE · 探店笔记</span>
-              <span class="mono">NO. {{ util.pad(blog.id) }}</span>
-            </div>
-            <h1 class="article__title">{{ blog.title }}</h1>
-            <div class="article__byline">
-              <img
-                class="avatar"
-                :src="blog.icon || '/imgs/icons/default-icon.png'"
-                alt=""
-                @error="avatarFallback"
-              >
-              <div>
-                <a class="article__author" :href="authorUrl">{{ blog.name || '作者' }}</a>
-                <div class="mono" style="font-size:10.5px;color:var(--ink-mute);margin-top:2px">
-                  {{ util.formatDate(blog.createTime) }} · 发布于黑马点评
-                </div>
-              </div>
-              <button
-                v-if="showFollow"
-                class="btn btn--sm"
-                type="button"
-                style="margin-left:auto"
-                @click="follow"
-              >
-                {{ followed ? '已关注' : '+ 关注作者' }}
-              </button>
-            </div>
-          </header>
-
-          <div class="article__gallery" v-if="images.length">
-            <div class="gallery__main">
-              <img :src="images[active]" :alt="blog.title" @error="imgFallback">
-            </div>
-            <p class="figcap">
-              <span class="figcap__no">FIG.{{ util.pad(active + 1) }}</span>
-              <span>笔记图片 {{ active + 1 }} / {{ images.length }} · {{ util.formatDate(blog.createTime) }}</span>
-            </p>
-            <div class="gallery__thumbs" v-if="images.length > 1">
-              <button
-                class="gallery__thumb"
-                type="button"
-                v-for="(img, i) in images"
-                :key="i"
-                :class="{ 'is-active': i === active }"
-                @click="active = i"
-                :aria-label="'第 ' + (i + 1) + ' 张图片'"
-              >
-                <img :src="img" :alt="blog.title + ' 图' + (i + 1)" @error="imgFallback">
-              </button>
-            </div>
+      <template v-if="blog.id">
+        <header class="article-hero" v-reveal="0">
+          <div class="article-hero__eyebrow">
+            <span class="eyebrow">NOTE / 探店笔记</span>
+            <span class="pill mono">NO. {{ util.pad(blog.id) }}</span>
           </div>
-
-          <div class="prose" v-html="blog.content"></div>
-
-          <section class="article__shop" v-if="shop.id">
-            <div class="article__shop-head">
-              <h2 class="rail-title" style="border:0;padding:0;margin:0"><span>笔记里的店</span></h2>
-              <span class="kicker">PLACE</span>
+          <h1>{{ blog.title }}</h1>
+          <div class="article-byline">
+            <img class="avatar" :src="blog.icon || '/imgs/icons/default-icon.png'" alt="" @error="avatarFallback">
+            <div>
+              <a class="article-byline__name" :href="authorUrl">{{ blog.name || '作者' }}</a>
+              <div class="mono" style="font-size:10px;color:var(--muted);margin-top:2px">
+                {{ util.formatDate(blog.createTime) }} · 发布于黑马点评
+              </div>
             </div>
-            <a class="shop-card" :href="'/shop-detail.html?id=' + shop.id">
-              <div class="shop-card__fig">
+            <button
+              v-if="showFollow"
+              class="btn btn--secondary btn--sm"
+              type="button"
+              style="margin-left:auto"
+              @click="follow"
+            >
+              {{ followed ? '已关注' : '+ 关注作者' }}
+            </button>
+          </div>
+        </header>
+
+        <div class="article-gallery" v-if="images.length">
+          <div class="gallery__main">
+            <img :src="images[active]" :alt="blog.title" @error="imgFallback">
+          </div>
+          <div class="gallery__thumbs" v-if="images.length > 1">
+            <button
+              class="gallery__thumb"
+              type="button"
+              v-for="(img, i) in images"
+              :key="i"
+              :class="{ 'is-active': i === active }"
+              @click="active = i"
+              :aria-label="'第 ' + (i + 1) + ' 张图片'"
+            >
+              <img :src="img" :alt="blog.title + ' 图' + (i + 1)" @error="imgFallback">
+            </button>
+          </div>
+          <p class="figcap">
+            <span class="figcap__no mono">FIG.{{ util.pad(active + 1) }}</span>
+            <span>笔记图片 {{ active + 1 }} / {{ images.length }} · {{ util.formatDate(blog.createTime) }}</span>
+          </p>
+        </div>
+
+        <div class="article-layout">
+          <article>
+            <div class="prose" v-html="blog.content"></div>
+
+            <section class="article-shop" v-if="shop.id">
+              <span class="eyebrow">PLACE / 笔记里的店</span>
+              <a class="shop-mini" :href="'/shop-detail.html?id=' + shop.id" style="margin-top:14px;">
                 <img :src="util.firstImage(shop.images)" :alt="shop.name" @error="imgFallback">
-              </div>
-              <div>
-                <h3 class="shop-card__name">{{ shop.name }}</h3>
-                <div class="shop-card__meta">
-                  <star-rating :value="(shop.score || 0) / 10" :size="12"></star-rating>
-                  <span class="mono">¥{{ shop.avgPrice || 0 }} / 人</span>
-                  <span class="mono">{{ shop.comments }} 条评价</span>
+                <div>
+                  <div class="shop-mini__name">{{ shop.name }}</div>
+                  <div class="shop-mini__meta">
+                    <star-rating :value="(shop.score || 0) / 10" :size="12"></star-rating>
+                    <span style="margin-left:8px">¥{{ shop.avgPrice || 0 }} / 人 · {{ shop.comments || 0 }} 条评价</span>
+                  </div>
+                  <div class="shop-mini__meta">{{ shop.address }}</div>
                 </div>
-                <p class="shop-card__addr">{{ shop.address }}</p>
+                <span class="link-arrow" style="margin-left:auto;">去这家店 <app-icon name="arrow-up-right" :size="12"></app-icon></span>
+              </a>
+            </section>
+
+            <div class="article-end">
+              <a class="link-arrow" href="/">
+                <app-icon name="arrow-left" :size="13"></app-icon>回到首页
+              </a>
+              <button class="btn btn--primary article-end__like" type="button" @click="toggleLike">
+                <app-icon name="thumb" :size="15"></app-icon>
+                {{ blog.isLike ? '已点赞' : '为这篇笔记点赞' }} · {{ blog.liked || 0 }}
+              </button>
+            </div>
+          </article>
+
+          <aside class="article-rail" aria-label="作者与互动">
+            <section class="rail-card">
+              <div class="rail-card__head"><h2>作者</h2><span class="mono">AUTHOR</span></div>
+              <div class="author-card__row">
+                <img class="avatar avatar--lg" :src="blog.icon || '/imgs/icons/default-icon.png'" alt="" @error="avatarFallback">
+                <div>
+                  <div class="author-card__name">{{ blog.name || '作者' }}</div>
+                  <div class="author-card__meta">城市记录者</div>
+                </div>
               </div>
-              <span class="shop-card__go">去这家店 <app-icon name="arrow-up-right" :size="13"></app-icon></span>
-            </a>
-          </section>
+              <a class="btn btn--secondary" :href="authorUrl">查看作者主页</a>
+            </section>
 
-          <div class="article__end">
-            <a class="link-arrow" href="/">
-              <app-icon name="arrow-left" :size="13"></app-icon>回到首页
-            </a>
-            <button class="btn btn--primary" type="button" @click="toggleLike">
-              <app-icon name="thumb" :size="15"></app-icon>
-              {{ blog.isLike ? '已点赞' : '为这篇笔记点赞' }} · {{ blog.liked || 0 }}
-            </button>
-          </div>
-        </article>
-
-        <aside class="article__rail" aria-label="作者与互动">
-          <section class="author-card">
-            <p class="author-card__label">ABOUT THE AUTHOR</p>
-            <div class="author-card__head" style="margin-top:10px">
-              <img
-                class="avatar avatar--md"
-                :src="blog.icon || '/imgs/icons/default-icon.png'"
-                alt=""
-                @error="avatarFallback"
-              >
-              <div>
-                <div class="author-card__name">{{ blog.name || '作者' }}</div>
-                <div class="mono" style="font-size:10px;color:var(--ink-mute)">城市记录者</div>
+            <section class="rail-card like-card">
+              <div class="like-card__count">
+                <strong>{{ blog.liked || 0 }}</strong>
+                <span>PEOPLE LIKED</span>
               </div>
-            </div>
-            <div class="author-card__actions">
-              <a class="btn btn--ghost btn--block" :href="authorUrl">查看作者主页</a>
-            </div>
-          </section>
+              <div class="liker-list" v-if="likes.length">
+                <img
+                  class="avatar"
+                  v-for="u in likes"
+                  :key="u.id"
+                  :src="u.icon || '/imgs/icons/default-icon.png'"
+                  :alt="u.nickName || '点赞用户'"
+                  :title="u.nickName"
+                  @error="avatarFallback"
+                >
+              </div>
+              <p v-if="!logged" class="publish-note" style="margin-bottom:14px">登录后可查看点赞的人。</p>
+              <p v-else-if="!likes.length" class="publish-note" style="margin-bottom:14px">还没有人点赞，做第一个。</p>
+              <button class="btn btn--block" :class="blog.isLike ? 'btn--secondary' : 'btn--primary'" type="button" @click="toggleLike">
+                <app-icon name="thumb" :size="14"></app-icon>{{ blog.isLike ? '取消点赞' : '点赞' }}
+              </button>
+            </section>
 
-          <section class="like-card">
-            <div class="like-card__count">
-              <strong>{{ blog.liked || 0 }}</strong>
-              <span>PEOPLE LIKED</span>
-            </div>
-            <div class="liker-list" v-if="likes.length">
-              <img
-                class="avatar"
-                v-for="u in likes"
-                :key="u.id"
-                :src="u.icon || '/imgs/icons/default-icon.png'"
-                :alt="u.nickName || '点赞用户'"
-                :title="u.nickName"
-                @error="avatarFallback"
-              >
-            </div>
-            <p v-if="!logged" class="publish-note" style="margin-bottom:16px">登录后可查看点赞的人。</p>
-            <p v-else-if="!likes.length" class="publish-note" style="margin-bottom:16px">还没有人点赞，做第一个。</p>
-            <button class="btn btn--block" :class="blog.isLike ? 'btn--ghost' : 'btn--primary'" type="button" @click="toggleLike">
-              <app-icon name="thumb" :size="14"></app-icon>{{ blog.isLike ? '取消点赞' : '点赞' }}
-            </button>
-          </section>
-
-          <section class="aside-card">
-            <div class="aside-card__head"><h2>关于这份记录</h2><span class="mono">INFO</span></div>
-            <p class="rail__note" style="margin-top:8px">
-              笔记内容与图片由作者发布，点赞数据实时来自接口。演示项目，不构成消费建议。
-            </p>
-          </section>
-        </aside>
-      </div>
+            <section class="rail-card">
+              <div class="rail-card__head"><h2>关于这份记录</h2><span class="mono">INFO</span></div>
+              <p class="publish-note">笔记内容与图片由作者发布，点赞数据实时来自接口。演示项目，不构成消费建议。</p>
+            </section>
+          </aside>
+        </div>
+      </template>
 
       <template v-else-if="needLogin && !loading">
         <h1 class="sr-only">登录后查看这篇笔记</h1>
-        <empty-state
-          title="登录后查看这篇笔记"
-          :hint="loginHint"
-        >
-          <a class="btn btn--sm btn--primary" :href="loginHref">登录后继续</a>
-          <a class="btn btn--sm" href="/">回到首页</a>
+        <empty-state title="登录后查看这篇笔记" :hint="loginHint" kicker="MEMBERS ONLY">
+          <a class="btn btn--primary" :href="loginHref">登录后继续</a>
+          <a class="btn btn--secondary" href="/">回到首页</a>
         </empty-state>
       </template>
 
-      <empty-state v-else-if="!loading" title="这篇笔记找不到了" hint="它可能被作者删除，或者链接已经失效。">
-        <a class="btn btn--sm" href="/">回到首页</a>
+      <empty-state v-else-if="!loading" title="这篇笔记找不到了" hint="它可能被作者删除，或者链接已经失效。" kicker="NOT FOUND">
+        <a class="btn btn--primary" href="/">回到首页</a>
       </empty-state>
     </div>
   </main>
@@ -235,18 +214,13 @@
       this.queryBlogById(id);
     },
     methods: {
-      goBack: function () {
-        history.back();
-      },
       queryBlogById: function (id) {
         var vm = this;
         vm.loading = true;
-        // 与旧版一致：GET /blog/{id}
         api.blog(id)
           .then(function (data) {
             vm.blog = data || {};
             if (vm.blog.shopId) vm.queryShopById(vm.blog.shopId);
-            // 点赞列表和当前用户都是登录态数据，游客不请求
             if (util.loggedIn()) {
               vm.queryLikeList(id);
               vm.queryLoginUser();
@@ -254,8 +228,6 @@
           })
           .catch(function (err) {
             if (err && err.auth) {
-              // 当前后端对 /blog/{id} 也走登录拦截器；不在全局拦截器里跳转，
-              // 由页面给出“登录后查看”的说明，保留返回首页的出口。
               vm.authExpired = util.loggedIn();
               util.clearSession();
               vm.needLogin = true;
@@ -267,7 +239,6 @@
       },
       queryShopById: function (shopId) {
         var vm = this;
-        // 与旧版一致：GET /shop/{shopId}
         api.shop(shopId)
           .then(function (data) { vm.shop = data || {}; })
           .catch(function (err) { notify(err, 'error'); });
@@ -275,7 +246,6 @@
       queryLikeList: function (id) {
         var vm = this;
         if (!util.loggedIn()) return;
-        // 与旧版一致：GET /blog/likes/{id}
         api.blogLikes(id)
           .then(function (list) { vm.likes = list || []; })
           .catch(function (err) {
@@ -292,7 +262,6 @@
           vm.user = {};
           return;
         }
-        // 与旧版一致：GET /user/me
         api.me()
           .then(function (user) {
             vm.user = user || {};
@@ -305,7 +274,6 @@
       isFollowed: function () {
         var vm = this;
         if (!util.loggedIn() || !this.blog.userId) return;
-        // 与旧版一致：GET /follow/or/not/{userId}
         api.isFollow(this.blog.userId)
           .then(function (flag) { vm.followed = !!flag; })
           .catch(function (err) {
@@ -323,7 +291,6 @@
           setTimeout(function () { util.goLogin(); }, 220);
           return;
         }
-        // 与旧版一致：PUT /follow/{userId}/{isFollow}
         api.follow(this.blog.userId, !this.followed)
           .then(function () {
             notify(vm.followed ? '已取消关注' : '已关注', 'success');
@@ -346,7 +313,6 @@
           setTimeout(function () { util.goLogin(); }, 220);
           return;
         }
-        // 与旧版一致：PUT /blog/like/{id}，随后重新读取笔记与点赞列表
         api.likeBlog(this.blog.id)
           .then(function () { return api.blog(vm.blog.id); })
           .then(function (fresh) {

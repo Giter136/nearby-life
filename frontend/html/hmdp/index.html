@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>首页 — 黑马点评 · 城市生活志</title>
-  <meta name="description" content="黑马点评 · 杭州城市生活志：探店笔记、商户索引与限时优惠券。">
+  <title>黑马点评 · 杭州城市生活指南</title>
+  <meta name="description" content="杭州城市生活指南：真实探店笔记、本地商户索引与限时优惠券。">
   <link rel="icon" href="./favicon.ico">
   <link rel="stylesheet" href="./css/site.css">
 </head>
@@ -12,115 +12,231 @@
 <div id="app" v-cloak>
   <site-header active="home"></site-header>
 
-  <main class="page page--tight">
-    <div class="shell">
-
-      <!-- 头版：主稿 + 城市索引 -->
-      <section class="front" v-if="ready">
-        <article class="lead" v-if="lead" v-reveal="0">
-          <div class="lead__top">
-            <span class="kicker">本期头条 · COVER STORY</span>
-            <span class="kicker">第 01 版</span>
+  <main>
+    <section class="hero">
+      <div class="shell hero__grid">
+        <div class="hero__copy">
+          <p class="eyebrow">HANGZHOU · 城市生活指南</p>
+          <h1 class="hero__title">把城市生活，<br>读成 <em>a daily guide</em>。</h1>
+          <p class="hero__sub">从拱宸桥的一碗面，到运河边的一杯酒。真实探店笔记、商户索引和限时优惠，收在同一份城市读本里。</p>
+          <div class="hero__actions">
+            <a class="btn btn--primary btn--lg" href="/shop-list.html?type=1&name=%E7%BE%8E%E9%A3%9F">
+              探索美食商户 <app-icon name="arrow-up-right" :size="16"></app-icon>
+            </a>
+            <a class="btn btn--secondary btn--lg" href="#hot">读热门笔记</a>
           </div>
-          <a class="lead__figure" :href="blogUrl(lead)" :aria-label="lead.title">
-            <img :src="util.firstImage(lead.images)" :alt="lead.title" @error="imgFallback">
-          </a>
-          <p class="figcap">
-            <span class="figcap__no">FIG.01</span>
-            <span>本期头图 · 图文来自作者笔记</span>
-          </p>
-          <h1 class="lead__title"><a :href="blogUrl(lead)">{{ lead.title }}</a></h1>
-          <p class="lead__excerpt">{{ excerpt(lead.content) }}</p>
-          <div class="byline">
-            <img class="avatar avatar--sm" :src="lead.icon || '/imgs/icons/default-icon.png'" alt="" @error="avatarFallback">
-            <span class="byline__author">{{ lead.name || '作者' }}</span>
-            <span class="meta-dot" aria-hidden="true"></span>
-            <span class="mono">{{ util.formatMonthDay(lead.createTime) }}</span>
-            <span class="meta-dot" aria-hidden="true"></span>
-            <span class="mono">{{ lead.liked || 0 }} 人点赞</span>
+          <div class="hero__trust">
+            <span>真实探店笔记</span>
+            <span>按类别找店</span>
+            <span>限时优惠券</span>
           </div>
-        </article>
+        </div>
 
-        <aside class="rail" aria-label="城市索引与热门榜单">
-          <section class="rail__block" v-reveal="60">
-            <h2 class="rail-title"><span>城市索引</span><em>INDEX</em></h2>
-            <ul class="cat-list" v-if="types.length">
-              <li v-for="(t, i) in types" :key="t.id">
-                <a class="cat-row" :href="catUrl(t)">
-                  <span class="cat-row__no mono">{{ pad(i + 1) }}</span>
-                  <img class="cat-row__icon" :src="'/imgs' + t.icon" alt="" @error="iconFallback">
-                  <span class="cat-row__name">{{ t.name }}</span>
-                  <app-icon class="cat-row__arrow" name="arrow-right" :size="13"></app-icon>
-                </a>
-              </li>
-            </ul>
-            <p v-if="types.length" class="rail__note">按类目翻阅城市：每一类都是一份独立的地方索引。</p>
-            <div v-else class="rail__note">
-              <template v-if="logged && !typesForbidden">
-                <p>分类加载失败，请刷新重试。</p>
-              </template>
-              <template v-else>
-                <p>登录后可按类别翻阅城市。</p>
-                <a class="link-arrow" :href="loginUrl()">去登录 <app-icon name="arrow-right" :size="12"></app-icon></a>
-              </template>
+        <div class="hero__visual" v-if="lead">
+          <div class="hero__glow" aria-hidden="true"></div>
+          <a class="preview" :href="blogUrl(lead)" :aria-label="lead.title">
+            <div class="preview__bar">
+              <span class="preview__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="preview__url mono">hmdp.com / notes</span>
+              <span class="preview__badge">本期</span>
             </div>
-          </section>
+            <div class="preview__media">
+              <img :src="util.firstImage(lead.images)" :alt="lead.title" @error="imgFallback">
+            </div>
+            <div class="preview__body">
+              <span class="eyebrow">FIG.01 · 热门笔记</span>
+              <h2 class="preview__title">{{ lead.title }}</h2>
+              <div class="preview__meta">
+                <img class="avatar" :src="lead.icon || '/imgs/icons/default-icon.png'" alt="" @error="avatarFallback">
+                <span>{{ lead.name || '作者' }}</span>
+                <span class="meta-dot" aria-hidden="true"></span>
+                <span class="mono">{{ util.formatMonthDay(lead.createTime) }}</span>
+                <span class="likes mono">{{ lead.liked || 0 }} 赞</span>
+              </div>
+            </div>
+          </a>
+          <div class="preview-chip preview-chip--top">
+            <span class="mono">01</span>
+            <div><strong>{{ blogs.length }}</strong> 篇热读</div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-          <section class="rail__block" v-reveal="120">
-            <h2 class="rail-title"><span>点赞榜</span><em>RANK</em></h2>
-            <ol>
-              <li class="rank__item" v-for="(b, i) in ranked" :key="b.id">
-                <span class="rank__no mono">{{ pad(i + 1) }}</span>
-                <div>
-                  <h3 class="rank__title"><a :href="blogUrl(b)">{{ b.title }}</a></h3>
-                  <p class="rank__meta"><span class="mono">{{ b.liked || 0 }}</span> 赞 · {{ b.name || '作者' }}</p>
-                </div>
-              </li>
-            </ol>
-            <p v-if="!ranked.length" class="rail__note">榜单正在生成。</p>
-          </section>
-        </aside>
-      </section>
+    <section class="capabilities" aria-label="城市指南能做什么">
+      <div class="shell capabilities__grid">
+        <div class="capability">
+          <span class="capability__icon"><app-icon name="image" :size="17"></app-icon></span>
+          <h3>真实探店笔记</h3>
+          <p>来自真实用户的图文记录，按点赞排序。</p>
+        </div>
+        <div class="capability">
+          <span class="capability__icon"><app-icon name="pin" :size="17"></app-icon></span>
+          <h3>本地商户索引</h3>
+          <p>按类别与当前距离，找到附近的小店。</p>
+        </div>
+        <div class="capability">
+          <span class="capability__icon"><app-icon name="ticket" :size="17"></app-icon></span>
+          <h3>限时优惠券</h3>
+          <p>库存、折扣和有效期，券面上一目了然。</p>
+        </div>
+        <div class="capability">
+          <span class="capability__icon"><app-icon name="user" :size="17"></app-icon></span>
+          <h3>关注城市作者</h3>
+          <p>关注喜欢的作者，登录后查看关注动态。</p>
+        </div>
+      </div>
+    </section>
 
-      <!-- 笔记流 -->
-      <section class="feed" aria-labelledby="feed-title">
+    <section class="section" id="hot">
+      <div class="shell">
         <header class="section-head">
-          <h2 id="feed-title">热门笔记</h2>
-          <span class="section-head__note">HOT NOTES / 按点赞排序</span>
-          <span class="section-head__rule" aria-hidden="true"></span>
-          <span class="section-head__count mono">{{ pad(current) }}</span>
+          <div class="section-head__copy">
+            <span class="eyebrow">HOT NOTES / 按点赞排序</span>
+            <h2>热门笔记</h2>
+            <p>城市里正在被阅读的笔记。每一篇都来自一次真实的到店，按点赞数从高到低排列。</p>
+          </div>
+          <span class="section-head__aside mono">第 {{ pad(current) }} 页</span>
         </header>
 
         <div v-if="!notes.length && !loading && ready">
-          <empty-state title="还没有热门笔记" hint="等笔记获得点赞后，会出现在这里。">
-            <a class="btn btn--sm" href="/blog-edit.html">去写一篇</a>
+          <empty-state title="还没有热门笔记" hint="等笔记获得点赞后，会出现在这里。" kicker="EMPTY FEED">
+            <a class="btn btn--sm btn--primary" href="/blog-edit.html">写一篇</a>
           </empty-state>
         </div>
 
-        <div class="note-grid" v-if="notes.length">
+        <div class="notes-grid" v-if="notes.length">
           <note-card
             v-for="(b, i) in notes"
             :key="b.id"
             :note="b"
             :index="i + 2"
-            :delay="(i % 3) * 80"
+            :delay="(i % 3) * 60"
             @like="likeNote"
           ></note-card>
         </div>
 
-        <div v-if="loading" class="loading" role="status">
-          <span class="loading__line"></span><span class="mono">正在读取</span><span class="loading__line"></span>
-        </div>
+        <loading-rule v-if="loading" text="正在读取热门笔记"></loading-rule>
 
         <div class="feed-foot" v-if="hasMore && !loading">
-          <button class="btn btn--ghost" type="button" @click="loadMore">
+          <button class="btn btn--secondary" type="button" @click="loadMore">
             继续阅读 <span class="mono">/ {{ pad(current + 1) }}</span>
-            <app-icon name="arrow-down" :size="15"></app-icon>
           </button>
         </div>
         <p class="feed-end" v-else-if="ready && notes.length">本期热门笔记已读完 · 城市仍在继续</p>
-      </section>
+      </div>
+    </section>
 
+    <section class="section section--paper" id="index">
+      <div class="shell">
+        <template v-if="types.length">
+          <header class="section-head">
+            <div class="section-head__copy">
+              <span class="eyebrow">CITY INDEX / 城市索引</span>
+              <h2>按类别，翻阅城市。</h2>
+              <p>十个本地生活类别，每一类都是一份独立索引。点进去，按距离查看商户。</p>
+            </div>
+            <a class="section-head__aside link-arrow" href="/shop-list.html?type=1&name=%E7%BE%8E%E9%A3%9F">从美食开始 <app-icon name="arrow-right" :size="13"></app-icon></a>
+          </header>
+          <div class="type-grid">
+            <a class="type-card" v-for="(t, i) in types" :key="t.id" :href="catUrl(t)">
+              <div class="type-card__top">
+                <span class="type-card__no mono">{{ pad(i + 1) }}</span>
+                <img class="type-card__icon" :src="'/imgs' + t.icon" alt="" @error="iconFallback">
+              </div>
+              <span class="type-card__name">{{ t.name }}</span>
+              <span class="type-card__go">进入索引 <app-icon name="arrow-up-right" :size="13"></app-icon></span>
+            </a>
+          </div>
+        </template>
+
+        <div v-else-if="logged && !typesForbidden">
+          <empty-state title="城市分类暂时没有加载出来" hint="刷新页面再试一次。" kicker="CITY INDEX"></empty-state>
+        </div>
+
+        <div v-else class="gate gate--wide">
+          <div>
+            <span class="gate__mark"><app-icon name="compass" :size="22"></app-icon></span>
+            <p class="eyebrow">CITY INDEX / 登录后展开</p>
+            <h2 class="gate__title">城市分类，登录后解锁。</h2>
+            <p class="gate__hint">当前分类接口需要登录后访问。笔记和商户详情依然可以直接浏览。</p>
+          </div>
+          <div class="gate__actions">
+            <a class="btn btn--primary" :href="loginUrl()">登录后查看分类</a>
+            <a class="btn btn--secondary" href="/shop-list.html?type=1&name=%E7%BE%8E%E9%A3%9F">先逛美食</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="shell split">
+        <div>
+          <span class="eyebrow">READING LIST / 点赞榜</span>
+          <h2 class="display" style="font-size: clamp(34px, 4vw, 54px); margin-top: 12px;">这一期，大家赞了什么。</h2>
+          <p class="muted" style="margin-top: 16px; max-width: 42ch;">从当前读取到的热门笔记里，按点赞数再看一次。数字来自笔记本身的点赞记录。</p>
+          <a class="link-arrow" href="/shop-list.html?type=1&name=%E7%BE%8E%E9%A3%9F" style="margin-top: 24px;">按类别去找店 <app-icon name="arrow-right" :size="13"></app-icon></a>
+        </div>
+        <ol>
+          <li class="rank-item" v-for="(b, i) in ranked" :key="b.id" style="padding: 18px 0; grid-template-columns: 40px minmax(0, 1fr);">
+            <span class="rank-item__no" style="font-size: 26px;">{{ pad(i + 1) }}</span>
+            <div>
+              <h3 class="rank-item__title" style="font-family: var(--font-display); font-size: 22px; font-weight: 400; line-height: 1.25;">
+                <a :href="blogUrl(b)">{{ b.title }}</a>
+              </h3>
+              <p class="rank-item__meta" style="margin-top: 6px; font-size: 11px;">
+                <span class="mono">{{ b.liked || 0 }}</span> 赞 · {{ b.name || '作者' }} · {{ util.formatMonthDay(b.createTime) }}
+              </p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section--tight">
+      <div class="shell">
+        <header class="section-head" style="margin-bottom: 30px;">
+          <div class="section-head__copy">
+            <span class="eyebrow">HOW IT WORKS / 第一次来</span>
+            <h2>三步，翻阅这座城。</h2>
+            <p>从一篇笔记开始，按类别找到一家店，再把自己的发现留下来。没有多余的步骤。</p>
+          </div>
+        </header>
+        <div class="steps">
+          <div class="step">
+            <span class="step__no">01</span>
+            <h3>读一篇城市笔记</h3>
+            <p>从热门笔记开始，看看这座城里的人正在吃什么、逛哪里。</p>
+            <a class="link-arrow" href="#hot">去看热门 <app-icon name="arrow-right" :size="12"></app-icon></a>
+          </div>
+          <div class="step">
+            <span class="step__no">02</span>
+            <h3>找到对应的店</h3>
+            <p>进入商户索引，按类别、距离和评价找到笔记里的那家店。</p>
+            <a class="link-arrow" href="/shop-list.html?type=1&name=%E7%BE%8E%E9%A3%9F">翻阅商户 <app-icon name="arrow-right" :size="12"></app-icon></a>
+          </div>
+          <div class="step">
+            <span class="step__no">03</span>
+            <h3>写下你的发现</h3>
+            <p>登录后发布一篇带照片的探店笔记，把下一次出发留给别人。</p>
+            <a class="link-arrow" href="/blog-edit.html">开始写笔记 <app-icon name="arrow-right" :size="12"></app-icon></a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="shell">
+      <section class="cta-band">
+        <div>
+          <p class="eyebrow" style="color: rgba(246,243,233,.5);">WRITE / 写笔记</p>
+          <h2 style="margin-top: 12px;">下一次出发，<em>write it down</em>.</h2>
+          <p>把照片、标题和一句真实的感受留下来。下一篇被读到的城市笔记，也许就是你写的。</p>
+        </div>
+        <div class="cta-band__actions">
+          <a class="btn btn--primary btn--lg" href="/blog-edit.html">写一篇笔记</a>
+          <a class="btn btn--secondary btn--lg" href="/info.html">我的主页</a>
+        </div>
+      </section>
     </div>
   </main>
 
@@ -162,9 +278,6 @@
       }
     },
     created: function () {
-      // 首页笔记流是公开的（/blog/hot）。
-      // 城市分类接口在当前登录拦截器下是受保护的，游客不请求它，
-      // 避免一次分类请求把整页踢回登录页；有 token 时再取。
       if (util.loggedIn()) this.queryTypes();
       this.queryHotBlogs();
     },
@@ -188,7 +301,6 @@
           .then(function (list) { vm.types = list || []; })
           .catch(function (err) {
             if (err && err.auth) {
-              // token 失效：按游客继续浏览，不打断页面
               util.clearSession();
               vm.typesForbidden = true;
               return;

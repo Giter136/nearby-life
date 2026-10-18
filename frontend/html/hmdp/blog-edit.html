@@ -3,38 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>写笔记 — 黑马点评 · 城市生活志</title>
+  <title>写笔记 · 黑马点评</title>
   <meta name="description" content="写下你的探店笔记，关联商户并发布。">
   <link rel="icon" href="./favicon.ico">
   <link rel="stylesheet" href="./css/site.css">
 </head>
 <body>
 <div id="app" v-cloak>
-  <site-header active="write"></site-header>
+  <site-header active="profile"></site-header>
 
-  <main class="page page--tight">
+  <main class="page page--compact">
     <div class="shell">
-      <nav class="crumbs" aria-label="面包屑">
+      <nav class="breadcrumb" aria-label="面包屑">
         <a href="/">首页</a>
-        <span class="crumbs__sep">/</span>
+        <span>/</span>
         <a href="/info.html">我的主页</a>
-        <span class="crumbs__sep">/</span>
-        <span>写笔记</span>
+        <span>/</span>
+        <span aria-current="page">写笔记</span>
       </nav>
 
-      <header class="collection-head" style="padding-bottom:20px">
-        <div>
-          <span class="kicker collection-head__kicker">STUDIO · 发笔记</span>
-          <h1 style="font-size:clamp(40px,4vw,56px)">写一篇探店笔记</h1>
-          <div class="collection-head__meta">
-            <span>照片 · 标题 · 正文，一段城市记录</span>
-          </div>
+      <header class="list-hero" style="border-bottom: 0; padding-bottom: 7px;">
+        <p class="eyebrow list-hero__eyebrow">STUDIO / 发笔记</p>
+        <h1>写一篇探店笔记</h1>
+        <div class="list-hero__meta">
+          <span>照片 · 标题 · 正文，一段城市记录</span>
+          <span class="mono">DRAFT · 未发布</span>
         </div>
-        <div class="collection-head__stamp" aria-hidden="true">新建<br>笔记</div>
       </header>
 
-      <div class="editor">
-        <div>
+      <div class="composer-layout">
+        <section class="composer-card">
           <div class="uploader">
             <div class="uploader__head">
               <span class="uploader__label"><app-icon name="camera" :size="15"></app-icon>照片</span>
@@ -56,7 +54,7 @@
           </div>
 
           <input
-            class="editor__title-input"
+            class="composer-title"
             type="text"
             maxlength="40"
             v-model="params.title"
@@ -64,22 +62,22 @@
             aria-label="笔记标题"
           >
           <textarea
-            class="editor__content"
+            class="composer-content"
             v-model="params.content"
             placeholder="最近打卡了什么地方？吃了什么、看见了什么、想推荐给谁？"
             aria-label="笔记正文"
           ></textarea>
 
-          <div class="editor__foot">
+          <div class="composer-foot">
             <span class="mono">标题 {{ (params.title || '').length }} / 40</span>
             <span class="mono">正文 {{ (params.content || '').length }} 字</span>
             <span class="mono">{{ fileList.length }} 张照片</span>
           </div>
-        </div>
+        </section>
 
-        <aside class="editor__side">
+        <aside class="composer-side">
           <section class="panel">
-            <div class="panel__title"><h2>关联商户</h2><span class="mono">PLACE</span></div>
+            <div class="panel__head"><h2>关联商户</h2><span class="mono">PLACE</span></div>
             <button class="shop-pick" type="button" @click="showDialog = true">
               <div v-if="selectedShop.id" style="display:flex;align-items:center;gap:12px;min-width:0">
                 <img class="shop-pick__thumb" :src="util.firstImage(selectedShop.images)" alt="" @error="imgFallback">
@@ -95,7 +93,7 @@
           </section>
 
           <section class="panel">
-            <div class="panel__title"><h2>发布</h2><span class="mono">PUBLISH</span></div>
+            <div class="panel__head"><h2>发布</h2><span class="mono">PUBLISH</span></div>
             <div class="publish-box">
               <button class="btn btn--primary btn--block" type="button" :disabled="publishing" @click="submitBlog">
                 <app-icon name="check" :size="14"></app-icon>{{ publishing ? '正在发布' : '发布笔记' }}
@@ -106,7 +104,7 @@
           </section>
 
           <section class="panel panel--soft">
-            <div class="panel__title"><h2>写作提示</h2><span class="mono">TIPS</span></div>
+            <div class="panel__head"><h2>写作提示</h2><span class="mono">TIPS</span></div>
             <ul class="publish-note" style="display:grid;gap:8px">
               <li>· 标题写清地点与招牌，方便同城读者找到。</li>
               <li>· 正文写真实的消费体验，比形容词更有用。</li>
@@ -120,44 +118,44 @@
 
   <site-footer></site-footer>
 
-    <div class="modal-mask" v-if="showDialog" @click.self="closeDialog">
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shop-dialog-title" ref="dialog">
-        <div class="modal__head">
-          <h2 id="shop-dialog-title">关联商户</h2>
-          <button class="uploader__remove" type="button" style="position:static;width:28px;height:28px" aria-label="关闭" @click="closeDialog">
-            <app-icon name="close" :size="14"></app-icon>
+  <div class="modal-mask" v-if="showDialog" @click.self="closeDialog">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shop-dialog-title" ref="dialog">
+      <div class="modal__head">
+        <h2 id="shop-dialog-title">关联商户</h2>
+        <button class="uploader__remove" type="button" style="position:static;width:28px;height:28px" aria-label="关闭" @click="closeDialog">
+          <app-icon name="close" :size="14"></app-icon>
+        </button>
+      </div>
+      <div class="modal__body">
+        <div class="modal__search">
+          <input
+            ref="shopSearch"
+            class="input"
+            type="text"
+            v-model.trim="shopName"
+            placeholder="搜索商户名称，例如：茶餐厅"
+            @keydown.enter.prevent="queryShops"
+            aria-label="搜索商户名称"
+          >
+          <button class="btn btn--secondary btn--sm" type="button" @click="queryShops">
+            <app-icon name="search" :size="14"></app-icon>搜索
           </button>
         </div>
-        <div class="modal__body">
-          <div class="modal__search">
-            <input
-              ref="shopSearch"
-              class="input"
-              type="text"
-              v-model.trim="shopName"
-              placeholder="搜索商户名称，例如：茶餐厅"
-              @keydown.enter.prevent="queryShops"
-              aria-label="搜索商户名称"
-            >
-            <button class="btn btn--sm" type="button" @click="queryShops">
-              <app-icon name="search" :size="14"></app-icon>搜索
-            </button>
-          </div>
-          <div v-if="shopLoading" class="modal__empty">正在搜索商户…</div>
-          <div v-else-if="shops.length">
-            <button class="shop-option" type="button" v-for="s in shops" :key="s.id" @click="selectShop(s)">
-              <img :src="util.firstImage(s.images)" :alt="s.name" @error="imgFallback">
-              <div>
-                <div class="shop-option__name">{{ s.name }}</div>
-                <div class="shop-option__meta">{{ s.area || '杭州' }} · {{ s.address }}</div>
-              </div>
-              <app-icon name="arrow-right" :size="13"></app-icon>
-            </button>
-          </div>
-          <div v-else class="modal__empty">没有找到匹配的商户，换个关键词试试。</div>
+        <div v-if="shopLoading" class="modal__empty">正在搜索商户…</div>
+        <div v-else-if="shops.length">
+          <button class="shop-option" type="button" v-for="s in shops" :key="s.id" @click="selectShop(s)">
+            <img :src="util.firstImage(s.images)" :alt="s.name" @error="imgFallback">
+            <div>
+              <div class="shop-option__name">{{ s.name }}</div>
+              <div class="shop-option__meta">{{ s.area || '杭州' }} · {{ s.address }}</div>
+            </div>
+            <app-icon name="arrow-right" :size="13"></app-icon>
+          </button>
         </div>
+        <div v-else class="modal__empty">没有找到匹配的商户，换个关键词试试。</div>
       </div>
     </div>
+  </div>
 </div>
 
 <script src="./js/vue.js"></script>
