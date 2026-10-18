@@ -1,11 +1,11 @@
 ---
 name: city-guide-web
-description: Design and implement the 黑马点评 city-guide web app in a Stripe-informed layout with a Vestris-informed warm editorial surface. Use when building or restyling pages, navigation, cards, forms, empty states, or design tokens for this project, or when extracting a reusable multi-page city-guide design system.
+description: Design and implement the 近邻生活 city-guide web app in a Stripe-informed layout with a Vestris-informed warm editorial surface. Use when building or restyling pages, navigation, cards, forms, empty states, or design tokens for this project, or when extracting a reusable multi-page city-guide design system.
 ---
 
 # City Guide Web
 
-A design system for the 黑马点评 (Hangzhou city guide) desktop web app.  
+A design system for the 近邻生活 (Hangzhou city guide) desktop web app.
 **Structure follows Stripe. Surface follows Vestris. It is a multi-page product, never a one-page marketing clone.**
 
 Before designing, read `references/surface-notes.md`, `references/layout-patterns.md`, `references/page-recipes.md` and `references/tokens.css`. They contain the measured reference values and the page-level mapping.

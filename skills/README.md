@@ -4,7 +4,7 @@
 
 | 技能 | 用途 |
 |---|---|
-| [`city-guide-web`](city-guide-web/SKILL.md) | 黑马点评的 Stripe 版式 + Vestris 视觉体系：令牌、导航、组件、页面配方与检查清单 |
+| [`city-guide-web`](city-guide-web/SKILL.md) | 近邻生活的 Stripe 版式 + Vestris 视觉体系：令牌、导航、组件、页面配方与检查清单 |
 
 建议使用顺序：
 

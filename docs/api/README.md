@@ -1,6 +1,6 @@
-# 黑马点评 API 接口文档
+# 近邻生活 API 接口文档
 
-> **项目**: hm-dianping (黑马点评)  
+> **项目**: nearby-life（近邻生活）<br>
 > **版本**: v1.0 | **更新日期**: 2026-07-25  
 > **技术栈**: Spring Boot 2.3.12 + MyBatis-Plus 3.4.3 + Redis + MySQL + Vue.js
 
