@@ -222,8 +222,12 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 new Distance(5000),
                 RedisGeoCommands.GeoSearchCommandArgs.newGeoSearchArgs().includeDistance().limit(end)
         );
-        if (results==null) {
-            return Result.ok(Collections.emptyList());
+        if (results==null || results.getContent().isEmpty()) {
+            // Redis 里没有 GEO 种子时回退到数据库分页，保证按类型仍能浏览
+            Page<Shop> page = query()
+                    .eq("type_id", typeId)
+                    .page(new Page<>(current, SystemConstants.DEFAULT_PAGE_SIZE));
+            return Result.ok(page.getRecords());
         }
         List<GeoResult<RedisGeoCommands.GeoLocation<String>>> content = results.getContent();
         if (content.size()<=from) {
@@ -244,10 +248,5 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             shop.setDistance(distanceMap.get(shop.getId().toString()).getValue());
         }
         return Result.ok(shops);
-    }
-
-    @Override
-    public Result queryShopByName(Integer typeId, Integer current, Double x, Double y) {
-        return null;
     }
 }
