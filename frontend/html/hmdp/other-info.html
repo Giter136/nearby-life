@@ -1,190 +1,241 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="zh-CN">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>黑马点评</title>
-  <!-- 引入样式 -->
-  <link rel="stylesheet" href="./css/element.css">
-  <link href="./css/main.css" rel="stylesheet">
-  <link href="./css/info.css" rel="stylesheet">
-
-  <style type="text/css">
-      .el-tabs--bottom .el-tabs__item.is-bottom:nth-child(2), .el-tabs--bottom .el-tabs__item.is-top:nth-child(2), .el-tabs--top .el-tabs__item.is-bottom:nth-child(2), .el-tabs--top .el-tabs__item.is-top:nth-child(2) {
-          padding-left: 15px;
-      }
-      .el-tabs, .el-tab-pane{
-          height: 100%;
-      }
-      .el-tabs__header{
-          height: 10%;
-      }
-      .el-tabs__content{
-          height: 90%;
-      }
-  </style>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>作者主页 — 黑马点评 · 城市生活志</title>
+  <meta name="description" content="作者主页：TA 的探店笔记与共同关注。">
+  <link rel="icon" href="./favicon.ico">
+  <link rel="stylesheet" href="./css/site.css">
 </head>
-
 <body>
-<div id="app">
-  <div class="header">
-    <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
-    <div class="header-title">&nbsp;&nbsp;&nbsp;</div>
-  </div>
-  <div class="basic">
-    <div class="basic-icon">
-      <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
-    </div>
-    <div class="basic-info">
-      <div class="name">{{user.nickName}}</div>
-      <span>杭州</span>
-    </div>
-    <div class="logout-btn" @click="follow" style="text-align: center">
-      {{followed ? "取消关注" : "关注"}}
-    </div>
-  </div>
-  <div class="introduce">
-    <span v-if="info.introduce"></span>
-    <span v-else>这个人很懒，什么都没有留下</span>
-  </div>
-  <div class="content">
-    <el-tabs v-model="activeName" @tab-click="handleClick">
-      <el-tab-pane label="笔记" name="1">
-        <div v-for="b in blogs" :key="b.id" class="blog-item">
-          <div class="blog-img"><img :src="b.images.split(',')[0]" alt=""></div>
-          <div class="blog-info">
-            <div class="blog-title" v-html="b.title"></div>
-            <div class="blog-liked"><img src="/imgs/thumbup.png" alt=""> {{b.liked}}</div>
-            <div class="blog-comments"><i class="el-icon-chat-dot-round"></i> {{b.comments}}</div>
+<div id="app" v-cloak>
+  <site-header></site-header>
+
+  <main class="page page--tight">
+    <div class="shell">
+      <nav class="crumbs" aria-label="面包屑">
+        <a href="/">首页</a>
+        <span class="crumbs__sep">/</span>
+        <span>作者主页</span>
+      </nav>
+
+      <loading-rule v-if="loading" text="正在打开主页"></loading-rule>
+
+      <template v-if="user.id">
+        <header class="profile-head" v-reveal="0">
+          <div class="profile-avatar">
+            <img :src="user.icon || '/imgs/icons/default-icon.png'" :alt="user.nickName" @error="avatarFallback">
           </div>
+          <div>
+            <span class="kicker">AUTHOR · 城市记录者</span>
+            <h1 class="profile-name">{{ user.nickName }}</h1>
+            <div class="profile-meta">
+              <span>{{ info.city || '杭州' }}</span>
+              <span class="meta-dot" aria-hidden="true"></span>
+              <span class="mono">UID {{ user.id }}</span>
+            </div>
+            <div class="profile-stats">
+              <div><strong>{{ util.pad(blogs.length) }}</strong>笔记</div>
+              <div><strong>{{ info.fans || 0 }}</strong>粉丝</div>
+              <div><strong>{{ info.followee || 0 }}</strong>关注</div>
+            </div>
+          </div>
+          <div class="profile-actions">
+            <button class="btn" :class="followed ? 'btn--ghost' : 'btn--primary'" type="button" @click="follow">
+              {{ followed ? '已关注 · 取消' : '+ 关注' }}
+            </button>
+            <a class="btn btn--ghost" href="/">回到首页</a>
+          </div>
+        </header>
+
+        <p class="profile-intro" v-reveal="60">
+          <template v-if="info.introduce">{{ info.introduce }}</template>
+          <span v-else class="profile-intro__empty">这个人很懒，什么都没有留下。</span>
+        </p>
+
+        <div class="profile-grid">
+          <div>
+            <div class="tabs" role="tablist" aria-label="作者主页内容">
+              <button class="tab" type="button" role="tab" :aria-selected="tab === 'notes'" :class="{ 'is-active': tab === 'notes' }" @click="tab = 'notes'">
+                <span class="mono">01</span>TA 的笔记
+              </button>
+              <button class="tab" type="button" role="tab" :aria-selected="tab === 'common'" :class="{ 'is-active': tab === 'common' }" @click="switchTab('common')">
+                <span class="mono">02</span>共同关注
+              </button>
+            </div>
+
+            <div class="tab-panel" v-show="tab === 'notes'">
+              <div class="note-list" v-if="blogs.length">
+                <note-card
+                  v-for="(b, i) in blogs"
+                  :key="b.id"
+                  :note="b"
+                  variant="row"
+                  :index="i + 1"
+                  :delay="(i % 4) * 50"
+                  @like="likeNote"
+                ></note-card>
+              </div>
+              <empty-state v-else-if="!loading" title="TA 还没有发布笔记" hint="去看看首页上其他人写下的城市。" >
+                <a class="btn btn--sm" href="/">去首页</a>
+              </empty-state>
+            </div>
+
+            <div class="tab-panel" v-show="tab === 'common'">
+              <p class="record__intro" style="margin-bottom:10px">你们都关注了：</p>
+              <div v-if="commonFollows.length">
+                <div class="follow-row" v-for="u in commonFollows" :key="u.id">
+                  <img class="avatar avatar--md" :src="u.icon || '/imgs/icons/default-icon.png'" :alt="u.nickName" @error="avatarFallback">
+                  <div>
+                    <div class="follow-row__name">{{ u.nickName }}</div>
+                    <div class="follow-row__meta mono">UID {{ u.id }}</div>
+                  </div>
+                  <a class="btn btn--sm btn--ghost" :href="'/other-info.html?id=' + u.id">去主页看看</a>
+                </div>
+              </div>
+              <empty-state v-else-if="commonLoading" title="正在查找共同关注" hint=""></empty-state>
+              <empty-state v-else title="暂时没有共同关注" hint="关注更多作者后，这里会显示你们共同关注的人。"></empty-state>
+            </div>
+          </div>
+
+          <aside aria-label="主页信息">
+            <section class="aside-card">
+              <div class="aside-card__head"><h2>关于作者</h2><span class="mono">AUTHOR</span></div>
+              <p class="rail__note">城市记录者，用笔记留下街巷里的味道与去处。</p>
+              <div class="record__row" style="grid-template-columns:70px 1fr;padding:14px 0">
+                <span class="record__label">粉丝</span><span class="record__value mono">{{ info.fans || 0 }}</span>
+              </div>
+              <div class="record__row" style="grid-template-columns:70px 1fr;padding:14px 0">
+                <span class="record__label">关注</span><span class="record__value mono">{{ info.followee || 0 }}</span>
+              </div>
+            </section>
+          </aside>
         </div>
-      </el-tab-pane>
-      <el-tab-pane label="共同关注" name="2">
-        <div>你们都关注了：</div>
-        <div class="follow-info" v-for="u in commonFollows" :key="u.id">
-          <div class="follow-info-icon" @click="toOtherInfo(u.id)">
-            <img :src="u.icon || '/imgs/icons/default-icon.png'" alt="">
-          </div>
-          <div class="follow-info-name">
-            <div class="name">{{u.nickName}}</div>
-          </div>
-          <div class="follow-info-btn" @click="toOtherInfo(u.id)">
-              去主页看看
-          </div>
-        </div>
-      </el-tab-pane>
-    </el-tabs>
-  </div>
-  <foot-bar :active-btn="0"></foot-bar>
+      </template>
+
+      <empty-state v-else-if="!loading" title="没有找到这位作者" hint="用户可能不存在，或者链接已经失效。">
+        <a class="btn btn--sm" href="/">回到首页</a>
+      </empty-state>
+    </div>
+  </main>
+
+  <site-footer></site-footer>
 </div>
+
 <script src="./js/vue.js"></script>
 <script src="./js/axios.min.js"></script>
-<!-- 引入组件库 -->
-<script src="./js/element.js"></script>
-<script src="./js/common.js"></script>
-<script src="./js/footer.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/ui.js"></script>
 <script>
-  const app = new Vue({
-    el: "#app",
+  new Vue({
+    el: '#app',
     data: {
-      util,
-      user: "",
-      loginUser: {},
-      activeName: "1",
+      util: util,
+      loading: true,
+      user: {},
       info: {},
       blogs: [],
-      followed: false, // 是否关注了
-      commonFollows: [], // 共同关注
+      followed: false,
+      tab: 'notes',
+      commonFollows: [],
+      commonLoading: false,
+      loadedCommon: false
     },
-    created() {
+    created: function () {
       this.queryUser();
-      this.queryLoginUser();
     },
     methods: {
-      queryBlogs() {
-        axios.get("/blog/of/user", {
-            params: {id: this.user.id, current: 1}
+      queryUser: function () {
+        var vm = this;
+        var id = util.getUrlParam('id');
+        // 与旧版一致：GET /user/{id}
+        api.user(id)
+          .then(function (data) {
+            vm.user = data || {};
+            vm.loading = false;
+            if (!vm.user.id) return;
+            vm.queryUserInfo();
+            vm.queryBlogs();
+            vm.isFollowed();
           })
-          .then(({data}) => this.blogs = data)
-          .catch(this.$message.error)
+          .catch(function (err) {
+            vm.loading = false;
+            notify(err, 'error');
+          });
       },
-      queryLoginUser() {
-        // 查询用户信息
-        axios.get("/user/me")
-          .then(({data}) => {
-            // 保存用户
-            this.loginUser = data;
+      queryUserInfo: function () {
+        var vm = this;
+        // 与旧版一致：GET /user/info/{id}
+        api.userInfo(vm.user.id)
+          .then(function (data) {
+            if (data) vm.info = data;
           })
-          .catch(console.log)
+          .catch(function (err) { notify(err, 'error'); });
       },
-      queryUser() {
-        // 查询用户信息
-        let id = util.getUrlParam("id")
-        axios.get("/user/" + id)
-          .then(({data}) => {
-            // 保存用户
-            this.user = data;
-            // 查询用户详情
-            this.queryUserInfo();
-            // 查询用户笔记
-            this.queryBlogs();
-            // 是否被关注
-            this.isFollowed();
-          })
-          .catch(console.log)
+      queryBlogs: function () {
+        var vm = this;
+        // 与旧版一致：GET /blog/of/user?id=&current=1
+        api.userBlogs(vm.user.id, 1)
+          .then(function (list) { vm.blogs = list || []; })
+          .catch(function (err) { notify(err, 'error'); });
       },
-      goBack() {
-        history.back();
+      isFollowed: function () {
+        var vm = this;
+        if (!util.loggedIn()) return;
+        // 与旧版一致：GET /follow/or/not/{id}
+        api.isFollow(vm.user.id)
+          .then(function (flag) { vm.followed = !!flag; })
+          .catch(function (err) { notify(err, 'error'); });
       },
-      queryUserInfo(id) {
-        axios.get("/user/info/" + this.user.id)
-          .then(({data}) => {
-            if (!data) {
-              return
-            }
-            // 保存用户详情
-            this.info = data;
-            // 保存到本地
-            sessionStorage.setItem("userInfo", JSON.stringify(data))
-          })
-          .catch(err => {
-            this.$message.error(err);
-          })
-      },
-      isFollowed(){
-        axios.get("/follow/or/not/" + this.user.id)
-          .then(({data}) => this.followed = data)
-          .catch(this.$message.error)
-      },
-      queryCommonFollow() {
-        axios.get("/follow/common/" + this.user.id)
-          .then(({data}) => this.commonFollows = data)
-          .catch(err => {
-            this.$message.error(err);
-          })
-      },
-      follow() {
-        axios.put("/follow/" + this.user.id + "/" + !this.followed)
-          .then(() => {
-            this.$message.success(this.followed ? "已取消关注" : "已关注")
-            this.followed = !this.followed
-          })
-          .catch(this.$message.error)
-      },
-      handleClick(t) {
-        if (t.name === '2') {
-          this.queryCommonFollow();
+      follow: function () {
+        var vm = this;
+        if (!util.loggedIn()) {
+          notify('请先登录', 'error');
+          setTimeout(function () { location.href = '/login.html'; }, 220);
+          return;
         }
+        // 与旧版一致：PUT /follow/{id}/{isFollow}
+        api.follow(vm.user.id, !vm.followed)
+          .then(function () {
+            notify(vm.followed ? '已取消关注' : '已关注', 'success');
+            vm.followed = !vm.followed;
+          })
+          .catch(function (err) { notify(err, 'error'); });
       },
-      toOtherInfo(id){
-        location.href = "/other-info.html?id=" + id
+      switchTab: function (tab) {
+        this.tab = tab;
+        if (tab === 'common' && !this.loadedCommon) this.queryCommonFollow();
+      },
+      queryCommonFollow: function () {
+        var vm = this;
+        vm.commonLoading = true;
+        vm.loadedCommon = true;
+        // 与旧版一致：GET /follow/common/{id}
+        api.commonFollow(vm.user.id)
+          .then(function (list) { vm.commonFollows = list || []; })
+          .catch(function (err) { notify(err, 'error'); })
+          .then(function () { vm.commonLoading = false; });
+      },
+      likeNote: function (note) {
+        if (!util.loggedIn()) {
+          notify('请先登录后再点赞', 'error');
+          return;
+        }
+        // 与旧版一致：PUT /blog/like/{id}，随后 GET /blog/{id}
+        api.likeBlog(note.id)
+          .then(function () { return api.blog(note.id); })
+          .then(function (fresh) {
+            note.liked = fresh.liked;
+            note.isLike = fresh.isLike;
+          })
+          .catch(function (err) { notify(err, 'error'); });
+      },
+      avatarFallback: function (e) {
+        e.target.src = '/imgs/icons/default-icon.png';
       }
-    },
-
-  })
+    }
+  });
 </script>
 </body>
-
 </html>

@@ -1,243 +1,292 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="zh-CN">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>黑马点评</title>
-  <!-- 引入样式 -->
-  <link rel="stylesheet" href="./css/element.css">
-  <link href="./css/main.css" rel="stylesheet">
-  <link href="./css/info.css" rel="stylesheet">
-
-  <style type="text/css">
-      .el-tabs--bottom .el-tabs__item.is-bottom:nth-child(2), .el-tabs--bottom .el-tabs__item.is-top:nth-child(2), .el-tabs--top .el-tabs__item.is-bottom:nth-child(2), .el-tabs--top .el-tabs__item.is-top:nth-child(2) {
-          padding-left: 15px;
-      }
-
-      .el-tabs, .el-tab-pane {
-          height: 100%;
-      }
-
-      .el-tabs__header {
-          height: 10%;
-      }
-
-      .el-tabs__content {
-          height: 90%;
-      }
-  </style>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>我的主页 — 黑马点评 · 城市生活志</title>
+  <meta name="description" content="个人主页：我的笔记与关注动态。">
+  <link rel="icon" href="./favicon.ico">
+  <link rel="stylesheet" href="./css/site.css">
 </head>
-
 <body>
-<div id="app">
-  <div class="header">
-    <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
-    <div class="header-title">个人主页&nbsp;&nbsp;&nbsp;</div>
-  </div>
-  <div class="basic">
-    <div class="basic-icon">
-      <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
-    </div>
-    <div class="basic-info">
-      <div class="name">{{user.nickName}}</div>
-      <span>杭州</span>
-      <div class="edit-btn" @click="toEdit">
-        编辑资料
-      </div>
-    </div>
-    <div class="logout-btn" @click="logout">
-      退出登录
-    </div>
-  </div>
-  <div class="introduce">
-    <span v-if="info.introduce"></span>
-    <span v-else>添加个人简介，让大家更好的认识你 <i class="el-icon-edit"></i></span>
-  </div>
-  <div class="content">
-    <el-tabs v-model="activeName" @tab-click="handleClick">
-      <el-tab-pane label="笔记" name="1">
-        <div v-for="b in blogs" :key="b.id" class="blog-item">
-          <div class="blog-img"><img :src="b.images.split(',')[0]" alt=""></div>
-          <div class="blog-info">
-            <div class="blog-title">{{b.title}}</div>
-            <div class="blog-liked"><img src="/imgs/thumbup.png" alt=""> {{b.liked}}</div>
-            <div class="blog-comments"><i class="el-icon-chat-dot-round"></i> {{b.comments}}</div>
+<div id="app" v-cloak>
+  <site-header active="profile"></site-header>
+
+  <main class="page page--tight">
+    <div class="shell">
+      <nav class="crumbs" aria-label="面包屑">
+        <a href="/">首页</a>
+        <span class="crumbs__sep">/</span>
+        <span>我的主页</span>
+      </nav>
+
+      <loading-rule v-if="loadingProfile" text="正在打开档案"></loading-rule>
+
+      <template v-if="user.id">
+        <header class="profile-head" v-reveal="0">
+          <div class="profile-avatar">
+            <img :src="user.icon || '/imgs/icons/default-icon.png'" :alt="user.nickName" @error="avatarFallback">
           </div>
-        </div>
-      </el-tab-pane>
-      <el-tab-pane label="评价" name="2">评价</el-tab-pane>
-      <el-tab-pane label="粉丝(0)" name="3">粉丝(0)</el-tab-pane>
-      <el-tab-pane label="关注(0)" name="4">
-        <div class="blog-list" @scroll="onScroll">
-          <div class="blog-box" v-for="b in blogs2" :key="b.id">
-            <div class="blog-img2" @click="toBlogDetail(b)"><img :src="b.img" alt=""></div>
-            <div class="blog-title">{{b.title}}</div>
-            <div class="blog-foot">
-              <div class="blog-user-icon"><img :src="b.icon || '/imgs/icons/default-icon.png'" alt=""></div>
-              <div class="blog-user-name">{{b.name}}</div>
-              <div class="blog-liked" @click="addLike(b)">
-                <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1"
-                     xmlns="http://www.w3.org/2000/svg" p-id="2187" width="14" height="14">
-                  <path
-                      d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z"
-                      p-id="2188" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
-                </svg>
-                {{b.liked}}
-              </div>
+          <div>
+            <span class="kicker">MEMBER FILE · 会员档案</span>
+            <h1 class="profile-name">{{ user.nickName }}</h1>
+            <div class="profile-meta">
+              <span>杭州 · 拱墅</span>
+              <span class="meta-dot" aria-hidden="true"></span>
+              <span class="mono">UID {{ user.id }}</span>
+              <span class="meta-dot" aria-hidden="true"></span>
+              <span class="mono">CITY LIFE MEMBER</span>
+            </div>
+            <div class="profile-stats">
+              <div><strong>{{ util.pad(blogs.length) }}</strong>笔记</div>
+              <div><strong>{{ info.fans || 0 }}</strong>粉丝</div>
+              <div><strong>{{ info.followee || 0 }}</strong>关注</div>
             </div>
           </div>
+          <div class="profile-actions">
+            <a class="btn btn--primary" href="/info-edit.html">
+              <app-icon name="edit" :size="14"></app-icon>编辑资料
+            </a>
+            <button class="btn btn--ghost" type="button" @click="logout">
+              <app-icon name="logout" :size="14"></app-icon>退出登录
+            </button>
+          </div>
+        </header>
+
+        <p class="profile-intro" v-reveal="60">
+          <template v-if="info.introduce">{{ info.introduce }}</template>
+          <a v-else class="profile-intro__empty" href="/info-edit.html">
+            <app-icon name="edit" :size="13"></app-icon>还没有个人简介，去完善你的城市档案
+          </a>
+        </p>
+
+        <div class="profile-grid">
+          <div>
+            <div class="tabs" role="tablist" aria-label="主页内容">
+              <button class="tab" type="button" role="tab" :aria-selected="tab === 'notes'" :class="{ 'is-active': tab === 'notes' }" @click="switchTab('notes')">
+                <span class="mono">01</span>我的笔记
+              </button>
+              <button class="tab" type="button" role="tab" :aria-selected="tab === 'feed'" :class="{ 'is-active': tab === 'feed' }" @click="switchTab('feed')">
+                <span class="mono">02</span>关注动态
+              </button>
+            </div>
+
+            <div class="tab-panel" v-show="tab === 'notes'">
+              <div class="note-list" v-if="blogs.length">
+                <note-card
+                  v-for="(b, i) in blogs"
+                  :key="b.id"
+                  :note="b"
+                  variant="row"
+                  :index="i + 1"
+                  :delay="(i % 4) * 50"
+                  @like="likeNote"
+                ></note-card>
+              </div>
+              <empty-state v-else-if="!loadingProfile" title="还没有写过笔记" hint="把今天遇到的小店写下来，它会出现在这里。">
+                <a class="btn btn--sm" href="/blog-edit.html">写第一篇</a>
+              </empty-state>
+            </div>
+
+            <div class="tab-panel" v-show="tab === 'feed'">
+              <div class="note-list" v-if="feed.length">
+                <note-card
+                  v-for="(b, i) in feed"
+                  :key="b.id"
+                  :note="b"
+                  variant="row"
+                  :index="i + 1"
+                  :delay="(i % 4) * 50"
+                  @like="likeNote"
+                ></note-card>
+              </div>
+              <empty-state v-else-if="!feedLoading" title="关注的人还没有更新" hint="去首页看看，遇到喜欢的作者记得关注。">
+                <a class="btn btn--sm" href="/">去首页</a>
+              </empty-state>
+
+              <div class="loading" v-if="feedLoading" role="status">
+                <span class="loading__line"></span><span class="mono">正在读取动态</span><span class="loading__line"></span>
+              </div>
+              <div class="feed-foot" v-if="feed.length && feedHasMore && !feedLoading">
+                <button class="btn btn--ghost" type="button" @click="loadFeedMore">
+                  继续阅读 <app-icon name="arrow-down" :size="15"></app-icon>
+                </button>
+              </div>
+              <p class="feed-end" v-else-if="feed.length && !feedLoading">关注动态已读完</p>
+            </div>
+          </div>
+
+          <aside aria-label="档案信息">
+            <section class="aside-card">
+              <div class="aside-card__head"><h2>会员档案</h2><span class="mono">FILE</span></div>
+              <div class="record__row" style="grid-template-columns:70px 1fr;padding:14px 0">
+                <span class="record__label">城市</span><span class="record__value">{{ info.city || '杭州' }}</span>
+              </div>
+              <div class="record__row" style="grid-template-columns:70px 1fr;padding:14px 0">
+                <span class="record__label">性别</span><span class="record__value">{{ genderText }}</span>
+              </div>
+              <div class="record__row" style="grid-template-columns:70px 1fr;padding:14px 0">
+                <span class="record__label">生日</span><span class="record__value mono">{{ info.birthday || '未填写' }}</span>
+              </div>
+              <div class="record__row" style="grid-template-columns:70px 1fr;padding:14px 0">
+                <span class="record__label">积分</span><span class="record__value mono">{{ info.credits || 0 }}</span>
+              </div>
+              <a class="link-arrow" href="/info-edit.html" style="margin-top:16px">查看完整档案 <app-icon name="arrow-right" :size="12"></app-icon></a>
+            </section>
+
+            <section class="aside-card">
+              <div class="aside-card__head"><h2>写点什么</h2><span class="mono">WRITE</span></div>
+              <p class="rail__note">一条笔记由照片、标题和正文组成。发布后可以在「我的笔记」里找到。</p>
+              <a class="btn btn--block btn--sm" href="/blog-edit.html" style="margin-top:16px">开始写笔记</a>
+            </section>
+          </aside>
         </div>
-      </el-tab-pane>
-    </el-tabs>
-  </div>
-  <foot-bar :active-btn="4"></foot-bar>
+      </template>
+
+      <empty-state v-else-if="!loadingProfile" title="还没有登录" hint="登录后即可查看你的笔记与关注动态。">
+        <a class="btn btn--sm" href="/login.html">去登录</a>
+      </empty-state>
+    </div>
+  </main>
+
+  <site-footer></site-footer>
 </div>
+
 <script src="./js/vue.js"></script>
 <script src="./js/axios.min.js"></script>
-<!-- 引入组件库 -->
-<script src="./js/element.js"></script>
-<script src="./js/common.js"></script>
-<script src="./js/footer.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/ui.js"></script>
 <script>
-  const app = new Vue({
-    el: "#app",
+  new Vue({
+    el: '#app',
     data: {
-      user: "",
-      activeName: "1",
+      util: util,
+      loadingProfile: true,
+      user: {},
       info: {},
       blogs: [],
-      blogs2: [], // 关注的人的播客
+      tab: 'notes',
+      feed: [],
+      feedLoading: false,
+      feedHasMore: true,
+      // 与旧版一致的滚动分页参数
       params: {
-        minTime: 0, // 上一次拉取到的时间戳
-        offset: 0, // 偏移量
-      },
-      count: 5,
-      isReachBottom: false,
+        minTime: 0,
+        offset: 0
+      }
     },
-    created() {
+    computed: {
+      genderText: function () {
+        if (this.info.gender === true) return '男';
+        if (this.info.gender === false) return '女';
+        return '未填写';
+      }
+    },
+    created: function () {
       this.queryUser();
     },
     methods: {
-      load() {
-        this.count += 2;
-      },
-      queryBlogs() {
-        axios.get("/blog/of/me")
-          .then(({data}) => this.blogs = data)
-          .catch(this.$message.error)
-      },
-      queryBlogsOfFollow(clear) {
-        if (clear) {
-          this.params.offset = 0;
-          this.params.minTime = new Date().getTime() + 1;
-        }
-        let {minTime, offset: os} = this.params;
-        axios.get("/blog/of/follow", {
-            params: {offset: os, lastId: minTime || new Date().getTime() + 1}
-          })
-          .then(({data}) => {
-            if (!data) {
+      queryUser: function () {
+        var vm = this;
+        // 与旧版一致：GET /user/me
+        api.me()
+          .then(function (data) {
+            vm.user = data || {};
+            if (!vm.user.id) {
+              vm.loadingProfile = false;
               return;
             }
-            let {list, ...params} = data;
-            list.forEach(b => b.img = b.images.split(",")[0])
-            this.blogs2 = clear ? list : this.blogs2.concat(list);
-            this.params = params;
+            vm.queryUserInfo();
+            vm.queryBlogs();
           })
-          .catch(e => console.log(e))
+          .catch(function (err) {
+            vm.loadingProfile = false;
+            notify(err, 'error');
+            setTimeout(function () { location.href = '/login.html'; }, 600);
+          });
       },
-      queryUser() {
-        // 查询用户信息
-        axios.get("/user/me")
-          .then(({data}) => {
-            // 保存用户
-            this.user = data;
-            // 查询用户详情
-            this.queryUserInfo();
-            // 查询用户笔记
-            this.queryBlogs();
+      queryUserInfo: function () {
+        var vm = this;
+        // 与旧版一致：GET /user/info/{id}
+        api.userInfo(vm.user.id)
+          .then(function (data) {
+            if (!data) return;
+            vm.info = data;
+            sessionStorage.setItem('userInfo', JSON.stringify(data));
           })
-          .catch(err => {
-            location.href = "login.html"
+          .catch(function (err) { notify(err, 'error'); });
+      },
+      queryBlogs: function () {
+        var vm = this;
+        // 与旧版一致：GET /blog/of/me
+        api.myBlogs()
+          .then(function (list) {
+            vm.blogs = list || [];
+            vm.loadingProfile = false;
           })
+          .catch(function (err) {
+            vm.loadingProfile = false;
+            notify(err, 'error');
+          });
       },
-      goBack() {
-        history.back();
-      },
-      queryUserInfo() {
-        axios.get("/user/info/" + this.user.id)
-          .then(({data}) => {
+      queryFeed: function (clear) {
+        var vm = this;
+        if (clear) {
+          vm.params.offset = 0;
+          vm.params.minTime = new Date().getTime() + 1;
+          vm.feed = [];
+          vm.feedHasMore = true;
+        }
+        if (vm.feedLoading) return;
+        vm.feedLoading = true;
+        // 与旧版一致：GET /blog/of/follow?offset=&lastId=
+        api.followFeed(vm.params.offset, vm.params.minTime || new Date().getTime() + 1)
+          .then(function (data) {
             if (!data) {
-              return
+              vm.feedHasMore = false;
+              return;
             }
-            // 保存用户详情
-            this.info = data;
-            // 保存到本地
-            sessionStorage.setItem("userInfo", JSON.stringify(data))
+            var list = data.list || [];
+            vm.feed = clear ? list : vm.feed.concat(list);
+            vm.params = { minTime: data.minTime, offset: data.offset };
+            vm.feedHasMore = list.length > 0;
           })
-          .catch(err => {
-            this.$message.error(err);
+          .catch(function (err) {
+            vm.feedHasMore = false;
+            notify(err, 'error');
           })
+          .then(function () { vm.feedLoading = false; });
       },
-      toEdit() {
-        location.href = 'info-edit.html'
+      switchTab: function (tab) {
+        this.tab = tab;
+        if (tab === 'feed' && !this.feed.length) this.queryFeed(true);
       },
-      logout() {
-        axios.post("/user/logout")
-          .then(() => {
-            // 清理session
-            sessionStorage.removeItem("token")
-            // 跳转
-            location.href = "/"
-          })
-          .catch(this.$message.error)
+      loadFeedMore: function () {
+        if (!this.feedLoading && this.feedHasMore) this.queryFeed(false);
       },
-      handleClick(r) {
-        if (r.name === '4') {
-          this.queryBlogsOfFollow(true);
-        }
+      likeNote: function (note) {
+        // 与旧版一致：PUT /blog/like/{id}，随后 GET /blog/{id}
+        api.likeBlog(note.id)
+          .then(function () { return api.blog(note.id); })
+          .then(function (fresh) {
+            note.liked = fresh.liked;
+            note.isLike = fresh.isLike;
+          })
+          .catch(function (err) { notify(err, 'error'); });
       },
-      addLike(b) {
-        axios.put("/blog/like/" + b.id)
-          .then(({data}) => {
-            this.queryBlogById(b);
-          })
-          .catch(err => {
-            this.$message.error(err)
-          })
+      logout: function () {
+        // 与旧版一致：POST /user/logout；本地会话无论如何都清理
+        api.logout().catch(function () {}).then(function () {
+          sessionStorage.removeItem('token');
+          notify('已退出登录', 'success');
+          setTimeout(function () { location.href = '/'; }, 400);
+        });
       },
-      queryBlogById(b) {
-        axios.get("/blog/" + b.id)
-          .then(({data}) => {
-            b.liked = data.liked;
-            b.isLike = data.isLike;
-          })
-          .catch(() => {
-            this.$message.error
-            b.liked++;
-          })
-      },
-      onScroll(e) {
-        let scrollTop = e.target.scrollTop;
-        let offsetHeight = e.target.offsetHeight;
-        let scrollHeight = e.target.scrollHeight;
-        if (scrollTop === 0) {
-          // 到顶部了，查询一次
-          this.queryBlogsOfFollow(true);
-        } else if (scrollTop + offsetHeight + 1 > scrollHeight && !this.isReachBottom) {
-          this.isReachBottom = true
-          // 再次查询下一页数据
-          this.queryBlogsOfFollow();
-        } else {
-          this.isReachBottom = false
-        }
+      avatarFallback: function (e) {
+        e.target.src = '/imgs/icons/default-icon.png';
       }
-    },
-
-  })
+    }
+  });
 </script>
 </body>
-
 </html>

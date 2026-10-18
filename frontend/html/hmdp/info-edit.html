@@ -1,136 +1,180 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>黑马点评</title>
-  <!-- 引入样式 -->
-  <link rel="stylesheet" href="./css/element.css">
-  <link href="./css/main.css" rel="stylesheet">
-  <link href="./css/info.css" rel="stylesheet">
-
-  <style type="text/css">
-
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>资料档案 — 黑马点评 · 城市生活志</title>
+  <meta name="description" content="查看个人资料档案。">
+  <link rel="icon" href="./favicon.ico">
+  <link rel="stylesheet" href="./css/site.css">
 </head>
 <body>
-<div id="app">
-  <div class="header">
-    <div class="header-back-btn" @click="goBack" ><i class="el-icon-arrow-left"></i></div>
-    <div class="header-title">资料编辑&nbsp;&nbsp;&nbsp;</div>
-  </div>
-  <div class="edit-container">
-    <div class="info-box">
-      <div class="info-item">
-        <div class="info-label">头像</div>
-        <div class="info-btn">
-          <img width="35" :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
-          <div><i class="el-icon-arrow-right"></i></div>
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div class="info-item">
-        <div class="info-label">昵称</div>
-        <div class="info-btn">
-          <div>{{user.nickName}}</div>
-          <div>
-            <i class="el-icon-arrow-right"></i>
-          </div>
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div class="info-item">
-        <div class="info-label">个人介绍</div>
-        <div class="info-btn">
-          <div style="overflow: hidden; width: 150px;text-align: right">{{info.introduce || '介绍一下自己'}}</div>
-          <div>
-            <i class="el-icon-arrow-right"></i>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="info-box">
-      <div class="info-item">
-        <div class="info-label">性别</div>
-        <div class="info-btn">
-          <div>{{info.gender || '选择'}}</div>
-          <div><i class="el-icon-arrow-right"></i></div>
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div class="info-item">
-        <div class="info-label">城市</div>
-        <div class="info-btn">
-          <div>{{info.city || '选择'}}</div>
-          <div><i class="el-icon-arrow-right"></i></div>
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div class="info-item">
-        <div class="info-label">生日</div>
-        <div class="info-btn">
-          <div>{{info.birthday || '添加'}}</div>
-          <div><i class="el-icon-arrow-right"></i></div>
-        </div>
-      </div>
-    </div>
+<div id="app" v-cloak>
+  <site-header active="profile"></site-header>
 
-    <div class="info-box">
-      <div class="info-item">
-        <div class="info-label">我的积分</div>
-        <div class="info-btn">
-          <div>查看积分</div>
-          <div><i class="el-icon-arrow-right"></i></div>
+  <main class="page page--tight">
+    <div class="shell">
+      <nav class="crumbs" aria-label="面包屑">
+        <a href="/">首页</a>
+        <span class="crumbs__sep">/</span>
+        <a href="/info.html">我的主页</a>
+        <span class="crumbs__sep">/</span>
+        <span>资料档案</span>
+      </nav>
+
+      <header class="collection-head" style="border-bottom-width:3px">
+        <div>
+          <span class="kicker collection-head__kicker">MEMBER FILE · 只读档案</span>
+          <h1 style="font-size:clamp(40px,4vw,56px)">资料档案</h1>
+          <div class="collection-head__meta">
+            <span class="mono">UID {{ user.id || '—' }}</span>
+            <span class="meta-dot" aria-hidden="true"></span>
+            <span>杭州 · 拱墅</span>
+          </div>
         </div>
-      </div>
-      <div class="divider"></div>
-      <div class="info-item">
-        <div class="info-label">会员等级</div>
-        <div class="info-btn">
-          <div><a href="javascript:void(0)">成为VIP尊享特权</a></div>
-          <div><i class="el-icon-arrow-right"></i></div>
+        <div class="collection-head__stamp" aria-hidden="true">档案<br>存根</div>
+      </header>
+
+      <loading-rule v-if="loading" text="正在读取档案"></loading-rule>
+
+      <div class="record" v-if="!loading && user.id">
+        <div>
+          <p class="record__intro">
+            当前版本只支持查看资料，修改与保存尚未开放。以下是你档案中的内容，如需更新，请等待接口补齐。
+          </p>
+
+          <div class="record__sheet">
+            <div class="record__row">
+              <span class="record__label">头像</span>
+              <span class="record__value">
+                <img :src="user.icon || '/imgs/icons/default-icon.png'" :alt="user.nickName" style="width:52px;height:52px;object-fit:cover;border:1px solid var(--rule-strong)" @error="avatarFallback">
+              </span>
+              <span class="record__flag"><app-icon name="lock" :size="11"></app-icon>只读</span>
+            </div>
+            <div class="record__row">
+              <span class="record__label">昵称</span>
+              <span class="record__value">{{ user.nickName || '未设置' }}</span>
+              <span class="record__flag"><app-icon name="lock" :size="11"></app-icon>只读</span>
+            </div>
+            <div class="record__row">
+              <span class="record__label">个人介绍</span>
+              <span class="record__value">{{ info.introduce || '还没有填写个人介绍' }}</span>
+              <span class="record__flag"><app-icon name="lock" :size="11"></app-icon>只读</span>
+            </div>
+            <div class="record__row">
+              <span class="record__label">性别</span>
+              <span class="record__value">{{ genderText }}</span>
+              <span class="record__flag"><app-icon name="lock" :size="11"></app-icon>只读</span>
+            </div>
+            <div class="record__row">
+              <span class="record__label">城市</span>
+              <span class="record__value">{{ info.city || '未填写' }}</span>
+              <span class="record__flag"><app-icon name="lock" :size="11"></app-icon>只读</span>
+            </div>
+            <div class="record__row">
+              <span class="record__label">生日</span>
+              <span class="record__value mono">{{ info.birthday || '未填写' }}</span>
+              <span class="record__flag"><app-icon name="lock" :size="11"></app-icon>只读</span>
+            </div>
+            <div class="record__row">
+              <span class="record__label">我的积分</span>
+              <span class="record__value mono">{{ info.credits || 0 }}</span>
+              <span class="record__flag"><app-icon name="lock" :size="11"></app-icon>只读</span>
+            </div>
+            <div class="record__row">
+              <span class="record__label">会员等级</span>
+              <span class="record__value">{{ info.level ? '尊享会员' : '普通会员' }}</span>
+              <span class="record__flag"><app-icon name="lock" :size="11"></app-icon>只读</span>
+            </div>
+          </div>
         </div>
+
+        <aside class="record__aside">
+          <div class="record__profile">
+            <img :src="user.icon || '/imgs/icons/default-icon.png'" :alt="user.nickName" @error="avatarFallback">
+            <div>
+              <div class="author-card__name">{{ user.nickName }}</div>
+              <div class="mono" style="font-size:10px;color:var(--ink-mute);margin-top:3px">UID {{ user.id }}</div>
+            </div>
+          </div>
+          <h2>关于这份档案</h2>
+          <p>
+            档案数据来自用户详情接口，缓存于本次会话中。头像与昵称读取自当前登录用户。
+          </p>
+          <a class="btn btn--block" href="/info.html">返回我的主页</a>
+          <a class="btn btn--block btn--ghost" href="/blog-edit.html" style="margin-top:8px">去写一篇笔记</a>
+        </aside>
       </div>
+
+      <empty-state v-else-if="!loading" title="还没有登录" hint="登录后即可查看你的资料档案。">
+        <a class="btn btn--sm" href="/login.html">去登录</a>
+      </empty-state>
     </div>
-  </div>
-  <foot-bar :active-btn="4"></foot-bar>
+  </main>
+
+  <site-footer></site-footer>
 </div>
+
 <script src="./js/vue.js"></script>
 <script src="./js/axios.min.js"></script>
-<!-- 引入组件库 -->
-<script src="./js/element.js"></script>
-<script src="./js/common.js"></script>
-<script src="./js/footer.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/ui.js"></script>
 <script>
-
-  const app = new Vue({
-    el: "#app",
+  new Vue({
+    el: '#app',
     data: {
-      user: "",
-      info: {},
+      util: util,
+      loading: true,
+      user: {},
+      info: {}
     },
-    created() {
+    computed: {
+      genderText: function () {
+        if (this.info.gender === true) return '男';
+        if (this.info.gender === false) return '女';
+        return '未填写';
+      }
+    },
+    created: function () {
       this.checkLogin();
     },
     methods: {
-      checkLogin() {
-        // 查询用户信息
-        axios.get("/user/me")
-        .then(({data}) => {
-          this.user = data;
-          this.info = JSON.parse(sessionStorage.getItem("userInfo")) || {}
-        })
-        .catch(err => {
-          this.$message.error(err);
-          setTimeout(() => location.href = "login.html", 1000)
-        })
+      checkLogin: function () {
+        var vm = this;
+        // 与旧版一致：GET /user/me
+        api.me()
+          .then(function (data) {
+            vm.user = data || {};
+            var cached = {};
+            try {
+              cached = JSON.parse(sessionStorage.getItem('userInfo')) || {};
+            } catch (e) {
+              cached = {};
+            }
+            vm.info = cached;
+            vm.loading = false;
+            // 缓存缺失时用同一用户详情接口补齐（旧版未做，直接进入本页会显示空白）
+            if (!cached.userId && vm.user.id) {
+              api.userInfo(vm.user.id)
+                .then(function (detail) {
+                  if (!detail) return;
+                  vm.info = detail;
+                  sessionStorage.setItem('userInfo', JSON.stringify(detail));
+                })
+                .catch(function (err) { notify(err, 'error'); });
+            }
+          })
+          .catch(function (err) {
+            vm.loading = false;
+            notify(err, 'error');
+            setTimeout(function () { location.href = '/login.html'; }, 600);
+          });
       },
-      goBack(){
-        history.back();
+      avatarFallback: function (e) {
+        e.target.src = '/imgs/icons/default-icon.png';
       }
-    },
-
-  })
+    }
+  });
 </script>
 </body>
 </html>

@@ -1,388 +1,306 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>黑马点评</title>
-  <!-- 引入样式 -->
-  <link rel="stylesheet" href="./css/element.css">
-
-  <link href="./css/blog-detail.css" rel="stylesheet">
-  <link href="./css/main.css" rel="stylesheet">
-
-  <style type="text/css">
-    .header{
-        position: relative;
-    }
-    .foot-view span{
-        font-size: 12px;
-    }
-    .liked{
-
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>探店笔记 — 黑马点评 · 城市生活志</title>
+  <meta name="description" content="一篇关于杭州街巷的探店笔记。">
+  <link rel="icon" href="./favicon.ico">
+  <link rel="stylesheet" href="./css/site.css">
 </head>
 <body>
-<div id="app">
-  <div class="header">
-    <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
-    <div class="header-title"></div>
-    <div class="header-share">...</div>
-  </div>
-  <div style="height: 85%; overflow-y: scroll; overflow-x: hidden">
-    <div class="blog-info-box" ref="swiper"
-         @touchstart="moveStart"
-         @touchmove="moving"
-         @touchend="moveEnd">
-      <div class="swiper-item" v-for="(img, i) in blog.images" :key="i">
-        <img :src="img" alt="" style="width: 100%" height="100%">
-      </div>
-    </div>
-    <div class="basic">
-      <div class="basic-icon" @click="toOtherInfo">
-        <img :src="blog.icon || '/imgs/icons/default-icon.png'" alt="">
-      </div>
-      <div class="basic-info">
-        <div class="name">{{blog.name}}</div>
-        <span class="time">{{formatTime(new Date(blog.createTime))}}</span>
-      </div>
-      <div style="width: 20%">
-        <div class="logout-btn" @click="follow" v-show="!user || user.id !== blog.userId ">
-          {{followed ? '取消关注' : '关注'}}
-        </div>
+<div id="app" v-cloak>
+  <site-header></site-header>
+
+  <main class="page page--tight">
+    <div class="shell">
+      <nav class="crumbs" aria-label="面包屑">
+        <a href="/">首页</a>
+        <span class="crumbs__sep">/</span>
+        <span>探店笔记</span>
+        <span class="crumbs__sep">/</span>
+        <span>{{ shop.name || '记录' }}</span>
+      </nav>
+
+      <loading-rule v-if="loading" text="正在展开笔记"></loading-rule>
+
+      <div class="article" v-if="blog.id">
+        <article class="article__main" v-reveal="0">
+          <header class="article__head">
+            <div class="article__kicker">
+              <span class="kicker">NOTE · 探店笔记</span>
+              <span class="mono">NO. {{ util.pad(blog.id) }}</span>
+            </div>
+            <h1 class="article__title">{{ blog.title }}</h1>
+            <div class="article__byline">
+              <img
+                class="avatar"
+                :src="blog.icon || '/imgs/icons/default-icon.png'"
+                alt=""
+                @error="avatarFallback"
+              >
+              <div>
+                <a class="article__author" :href="authorUrl">{{ blog.name || '匿名作者' }}</a>
+                <div class="mono" style="font-size:10.5px;color:var(--ink-mute);margin-top:2px">
+                  {{ util.formatDate(blog.createTime) }} · 写于杭州
+                </div>
+              </div>
+              <button
+                v-if="showFollow"
+                class="btn btn--sm"
+                type="button"
+                style="margin-left:auto"
+                @click="follow"
+              >
+                {{ followed ? '已关注' : '+ 关注作者' }}
+              </button>
+            </div>
+          </header>
+
+          <div class="article__gallery" v-if="images.length">
+            <div class="gallery__main">
+              <img :src="images[active]" :alt="blog.title" @error="imgFallback">
+            </div>
+            <p class="figcap">
+              <span class="figcap__no">FIG.{{ util.pad(active + 1) }}</span>
+              <span>笔记图片 {{ active + 1 }} / {{ images.length }} · {{ util.formatDate(blog.createTime) }}</span>
+            </p>
+            <div class="gallery__thumbs" v-if="images.length > 1">
+              <button
+                class="gallery__thumb"
+                type="button"
+                v-for="(img, i) in images"
+                :key="i"
+                :class="{ 'is-active': i === active }"
+                @click="active = i"
+                :aria-label="'第 ' + (i + 1) + ' 张图片'"
+              >
+                <img :src="img" :alt="blog.title + ' 图' + (i + 1)" @error="imgFallback">
+              </button>
+            </div>
+          </div>
+
+          <div class="prose" v-html="blog.content"></div>
+
+          <section class="article__shop" v-if="shop.id">
+            <div class="article__shop-head">
+              <h2 class="rail-title" style="border:0;padding:0;margin:0"><span>笔记里的店</span></h2>
+              <span class="kicker">PLACE</span>
+            </div>
+            <a class="shop-card" :href="'/shop-detail.html?id=' + shop.id">
+              <div class="shop-card__fig">
+                <img :src="util.firstImage(shop.images)" :alt="shop.name" @error="imgFallback">
+              </div>
+              <div>
+                <h3 class="shop-card__name">{{ shop.name }}</h3>
+                <div class="shop-card__meta">
+                  <star-rating :value="(shop.score || 0) / 10" :size="12"></star-rating>
+                  <span class="mono">¥{{ shop.avgPrice }} / 人</span>
+                  <span class="mono">{{ shop.comments }} 条评价</span>
+                </div>
+                <p class="shop-card__addr">{{ shop.address }}</p>
+              </div>
+              <span class="shop-card__go">去这家店 <app-icon name="arrow-up-right" :size="13"></app-icon></span>
+            </a>
+          </section>
+
+          <div class="article__end">
+            <a class="link-arrow" href="/">
+              <app-icon name="arrow-left" :size="13"></app-icon>回到首页
+            </a>
+            <button class="btn btn--primary" type="button" @click="toggleLike">
+              <app-icon name="thumb" :size="15"></app-icon>
+              {{ blog.isLike ? '已点赞' : '为这篇笔记点赞' }} · {{ blog.liked || 0 }}
+            </button>
+          </div>
+        </article>
+
+        <aside class="article__rail" aria-label="作者与互动">
+          <section class="author-card">
+            <p class="author-card__label">ABOUT THE AUTHOR</p>
+            <div class="author-card__head" style="margin-top:10px">
+              <img
+                class="avatar avatar--md"
+                :src="blog.icon || '/imgs/icons/default-icon.png'"
+                alt=""
+                @error="avatarFallback"
+              >
+              <div>
+                <div class="author-card__name">{{ blog.name || '匿名作者' }}</div>
+                <div class="mono" style="font-size:10px;color:var(--ink-mute)">城市记录者</div>
+              </div>
+            </div>
+            <div class="author-card__actions">
+              <a class="btn btn--ghost btn--block" :href="authorUrl">查看作者主页</a>
+            </div>
+          </section>
+
+          <section class="like-card">
+            <div class="like-card__count">
+              <strong>{{ blog.liked || 0 }}</strong>
+              <span>PEOPLE LIKED</span>
+            </div>
+            <div class="liker-list" v-if="likes.length">
+              <img
+                class="avatar"
+                v-for="u in likes"
+                :key="u.id"
+                :src="u.icon || '/imgs/icons/default-icon.png'"
+                :alt="u.nickName || '点赞用户'"
+                :title="u.nickName"
+                @error="avatarFallback"
+              >
+            </div>
+            <p v-else class="publish-note" style="margin-bottom:16px">还没有人点赞，做第一个。</p>
+            <button class="btn btn--block" :class="blog.isLike ? 'btn--ghost' : 'btn--primary'" type="button" @click="toggleLike">
+              <app-icon name="thumb" :size="14"></app-icon>{{ blog.isLike ? '取消点赞' : '点赞' }}
+            </button>
+          </section>
+
+          <section class="aside-card">
+            <div class="aside-card__head"><h2>关于这份记录</h2><span class="mono">INFO</span></div>
+            <p class="rail__note" style="margin-top:8px">
+              笔记内容与图片由作者发布，点赞数据实时来自接口。演示项目，不构成消费建议。
+            </p>
+          </section>
+        </aside>
       </div>
 
+      <empty-state v-else-if="!loading" title="这篇笔记找不到了" hint="它可能被作者删除，或者链接已经失效。">
+        <a class="btn btn--sm" href="/">回到首页</a>
+      </empty-state>
     </div>
-    <div class="blog-text" v-html="blog.content">
-    </div>
-    <div class="shop-basic">
-      <div class="shop-icon">
-        <img :src="shop.image" alt="">
-      </div>
-      <div style="width: 80%">
-        <div class="name">{{shop.name}}</div>
-        <div>
-          <el-rate
-              v-model="shop.score/10">
-          </el-rate>
-        </div>
-          <div class="shop-avg">￥{{shop.avgPrice}}/人</div>
-      </div>
-    </div>
-    <div class="zan-box">
-      <div>
-        <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2187" width="20" height="20">
-          <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" p-id="2188" :fill="blog.isLike ? '#ff6633' : '#82848a'"></path>
-        </svg>
-      </div>
-      <div class="zan-list">
-        <div class="user-icon-mini" v-for="u in likes" :key="u.id">
-          <img :src="u.icon || '/imgs/icons/default-icon.png'" alt="">
-        </div>
-        <div style="margin-left:10px;text-align: center;line-height: 24px;">{{blog.liked}}人点赞</div>
-      </div>
-    </div>
-    <div class="blog-divider"></div>
-    <div class="blog-comments">
-      <div class="comments-head">
-        <div>网友评价 <span>（119）</span></div>
-        <div><i class="el-icon-arrow-right"></i></div>
-      </div>
-      <div class="comment-list">
-        <div class="comment-box" v-for="i in 3" :key="i">
-          <div class="comment-icon">
-            <img
-                src="https://p0.meituan.net/userheadpicbackend/57e44d6eba01aad0d8d711788f30a126549507.jpg%4048w_48h_1e_1c_1l%7Cwatermark%3D0"
-                alt="">
-          </div>
-          <div class="comment-info">
-            <div class="comment-user">叶小乙 <span>Lv5</span></div>
-            <div style="display: flex;">
-              打分
-              <el-rate disabled v-model="4.5"></el-rate>
-            </div>
-            <div style="padding: 5px 0; font-size: 14px">
-              某平台上买的券，价格可以当工作餐吃，虽然价格便宜，但是这家店一点都没有...
-            </div>
-            <div class="comment-images">
-              <img
-                  src="https://qcloud.dpfile.com/pc/6T7MfXzx7USPIkSy7jzm40qZSmlHUF2jd-FZUL6WpjE9byagjLlrseWxnl1LcbuSGybIjx5eX6WNgCPvcASYAw.jpg"
-                  alt="">
-              <img
-                  src="https://qcloud.dpfile.com/pc/sZ5q-zgglv4VXEWU71xCFjnLM_jUHq-ylq0GKivtrz3JksWQ1f7oBWZsxm1DWgcaGybIjx5eX6WNgCPvcASYAw.jpg"
-                  alt="">
-              <img
-                  src="https://qcloud.dpfile.com/pc/xZy6W4NwuRFchlOi43DVLPFsx7KWWvPqifE1JTe_jreqdsBYA9CFkeSm2ZlF0OVmGybIjx5eX6WNgCPvcASYAw.jpg"
-                  alt="">
-              <img
-                  src="https://qcloud.dpfile.com/pc/xZy6W4NwuRFchlOi43DVLPFsx7KWWvPqifE1JTe_jreqdsBYA9CFkeSm2ZlF0OVmGybIjx5eX6WNgCPvcASYAw.jpg"
-                  alt="">
-            </div>
-            <div>
-              浏览641 &nbsp;&nbsp;&nbsp;&nbsp;评论5
-            </div>
-          </div>
-        </div>
-        <div
-            style="display: flex; justify-content: space-between;padding: 15px 0; border-top: 1px solid #f1f1f1; margin-top: 10px;">
-          <div>查看全部119条评价</div>
-          <div><i class="el-icon-arrow-right"></i></div>
-        </div>
-      </div>
-    </div>
-    <div class="blog-divider"></div>
-  </div>
-  <div class="foot">
-    <div class="foot-box">
-      <div class="foot-view"  @click="addLike()">
-        <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2187" width="26" height="26">
-          <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" p-id="2188" :fill="blog.isLike ? '#ff6633' : '#82848a'"></path>
-        </svg>
-        <span :class="{liked: blog.isLike}">{{blog.liked}}</span>
-      </div>
-    </div>
-    <div style="width: 40%">
-    </div>
-    <div class="foot-box">
-      <div class="foot-view"><i class="el-icon-chat-square"></i></div>
-    </div>
-  </div>
+  </main>
+
+  <site-footer></site-footer>
 </div>
+
 <script src="./js/vue.js"></script>
 <script src="./js/axios.min.js"></script>
-<!-- 引入组件库 -->
-<script src="./js/element.js"></script>
-<script src="./js/common.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/ui.js"></script>
 <script>
-  let each = function (ary, callback) {
-    for (let i = 0, l = ary.length; i < l; i++) {
-      if (callback(ary[i], i) === false) break
-    }
-  }
-  const app = new Vue({
-    el: "#app",
+  new Vue({
+    el: '#app',
     data: {
-      util,
+      util: util,
+      loading: false,
       blog: {},
       shop: {},
       likes: [],
-      user: {}, // 登录用户
-      followed: false, // 是否关注了
-      _width: 0,
-      duration: 300,
-      container: null,
-      items: [],
-      active: 0,
-      start: {
-        x: 0,
-        y: 0
-      },
-      move: {
-        x: 0,
-        y: 0
-      },
-      sensitivity: 60,
-      resistance: 0.3
+      user: {},
+      followed: false,
+      active: 0
     },
-    created() {
-      let id = util.getUrlParam("id");
+    computed: {
+      images: function () {
+        return util.imageList(this.blog.images);
+      },
+      showFollow: function () {
+        return !!this.user.id && this.user.id !== this.blog.userId;
+      },
+      authorUrl: function () {
+        return this.blog.userId ? '/other-info.html?id=' + this.blog.userId : '/';
+      }
+    },
+    created: function () {
+      var id = util.getUrlParam('id');
       this.queryBlogById(id);
     },
     methods: {
-      init() {
-        // 获得父容器节点
-        this.container = this.$refs.swiper
-        // 获得所有的子节点
-        this.items = this.container.querySelectorAll('.swiper-item')
-        this.updateItemWidth()
-        this.setTransform()
-        this.setTransition('none')
-      },
-      goBack() {
+      goBack: function () {
         history.back();
       },
-      toOtherInfo(){
-        if(this.blog.userId === this.user.id){
-          location.href = "/info.html"
-        }else{
-          location.href = "/other-info.html?id=" + this.blog.userId
+      queryBlogById: function (id) {
+        var vm = this;
+        vm.loading = true;
+        // 与旧版一致：GET /blog/{id}
+        api.blog(id)
+          .then(function (data) {
+            vm.blog = data || {};
+            if (vm.blog.shopId) vm.queryShopById(vm.blog.shopId);
+            vm.queryLikeList(id);
+            vm.queryLoginUser();
+          })
+          .catch(function (err) { notify(err, 'error'); })
+          .then(function () { vm.loading = false; });
+      },
+      queryShopById: function (shopId) {
+        var vm = this;
+        // 与旧版一致：GET /shop/{shopId}
+        api.shop(shopId)
+          .then(function (data) { vm.shop = data || {}; })
+          .catch(function (err) { notify(err, 'error'); });
+      },
+      queryLikeList: function (id) {
+        var vm = this;
+        // 与旧版一致：GET /blog/likes/{id}
+        api.blogLikes(id)
+          .then(function (list) { vm.likes = list || []; })
+          .catch(function (err) { notify(err, 'error'); });
+      },
+      queryLoginUser: function () {
+        var vm = this;
+        // 未登录时不请求 /user/me，避免拦截器把访客强制送去登录页
+        if (!util.loggedIn()) {
+          vm.user = {};
+          return;
         }
-      },
-      queryBlogById(id) {
-        axios.get("/blog/" + id)
-          .then(({data}) => {
-            data.images = data.images.split(",")
-            this.blog = data;
-            this.$nextTick(this.init);
-            this.queryShopById(data.shopId)
-            this.queryLikeList(id);
-            this.queryLoginUser();
+        // 与旧版一致：GET /user/me
+        api.me()
+          .then(function (user) {
+            vm.user = user || {};
+            if (vm.user.id !== vm.blog.userId) vm.isFollowed();
           })
-          .catch(this.$message.error)
+          .catch(function () {});
       },
-      queryShopById(shopId) {
-        axios.get("/shop/" + shopId)
-          .then(({data}) => {
-            data.image = data.images.split(",")[0]
-            this.shop = data
-          })
-          .catch(this.$message.error)
+      isFollowed: function () {
+        var vm = this;
+        if (!this.blog.userId) return;
+        // 与旧版一致：GET /follow/or/not/{userId}
+        api.isFollow(this.blog.userId)
+          .then(function (flag) { vm.followed = !!flag; })
+          .catch(function (err) { notify(err, 'error'); });
       },
-      queryLikeList(id){
-        axios.get("/blog/likes/" + id)
-          .then(({data}) => this.likes = data)
-          .catch(this.$message.error)
-      },
-      addLike(){
-        axios.put("/blog/like/" +this.blog.id)
-          .then(({data}) => {
-            axios.get("/blog/" + this.blog.id)
-              .then(({data}) => {
-                data.images = data.images.split(",")
-                this.blog = data;
-                this.queryLikeList(this.blog.id);
-              })
-              .catch(this.$message.error)
-          })
-          .catch(err => {
-            this.$message.error(err)
-          })
-      },
-      isFollowed(){
-        axios.get("/follow/or/not/" + this.blog.userId)
-          .then(({data}) => this.followed = data)
-          .catch(this.$message.error)
-      },
-      follow(){
-        axios.put("/follow/" + this.blog.userId + "/" + !this.followed)
-          .then(() => {
-            this.$message.success(this.followed ? "已取消关注" : "已关注")
-            this.followed = !this.followed
-          })
-          .catch(this.$message.error)
-      },
-      formatTime(b) {
-        return b.getFullYear() + "年" + (b.getMonth() + 1) + "月" + b.getDate() + "日 ";
-      },
-      formatMinutes(m) {
-        if (m < 10) m = "0" + m
-        return m;
-      },
-      queryLoginUser(){
-        // 查询用户信息
-        axios.get("/user/me")
-          .then(({ data }) => {
-            // 保存用户
-            this.user = data;
-            if(this.user.id !== this.blog.userId){
-              this.isFollowed();
-            }
-          })
-          .catch(console.log)
-      },
-      // 获取父容器宽度，并且更新所有的子节点宽度，因为我们默认所有子节点的宽高等于父节点的宽高
-      updateItemWidth() {
-        this._width = this.container.offsetWidth || document.documentElement.offsetWidth
-      },
-      // 根据当前活动子项的下标计算各个子项的X轴位置
-      // 计算公式(子项的下标 - 当前活动下标) * 子项宽度 + 偏移(手指移动距离)；
-      setTransform(offset) {
-        offset = offset || 0
-        each(this.items, (item, i) => {
-          let distance = (i - this.active) * this._width + offset
-          let transform = `translate3d(${distance}px, 0, 0)`
-          item.style.webkitTransform = transform
-          item.style.transform = transform
-        })
-      },
-      // 给每一个子项添加transition过度动画
-      setTransition(duration) {
-        duration = duration || this.duration
-        duration = typeof duration === 'number' ? (duration + 'ms') : duration
-        each(this.items, (item) => {
-          item.style.webkitTransition = duration
-          item.style.transition = duration
-        })
-      },
-      moveStart(e) {
-        console.log('moveStart')
-        this.start.x = e.changedTouches[0].pageX
-        this.start.y = e.changedTouches[0].pageY
-        this.setTransition('none')
-      },
-      moving(e) {
-        console.log('moving')
-        e.preventDefault()
-        e.stopPropagation()
-        let distanceX = e.changedTouches[0].pageX - this.start.x
-        let distanceY = e.changedTouches[0].pageY - this.start.y
-        if (Math.abs(distanceX) > Math.abs(distanceY)) {
-          this.isMoving = true
-          this.move.x = this.start.x + distanceX
-          this.move.y = this.start.y + distanceY
-          // 当活动子项为第一项且手指向右滑动或者活动项为最后一项切向左滑动的时候，添加阻力，形成一个拉弹簧的效果
-          if ((this.active === 0 && distanceX > 0) || (this.active === (this.items.length - 1) && distanceX < 0)) {
-            distanceX = distanceX * this.resistance
-          }
-          this.setTransform(distanceX)
+      follow: function () {
+        var vm = this;
+        if (!util.loggedIn()) {
+          notify('请先登录', 'error');
+          setTimeout(function () { location.href = '/login.html'; }, 220);
+          return;
         }
+        // 与旧版一致：PUT /follow/{userId}/{isFollow}
+        api.follow(this.blog.userId, !this.followed)
+          .then(function () {
+            notify(vm.followed ? '已取消关注' : '已关注', 'success');
+            vm.followed = !vm.followed;
+          })
+          .catch(function (err) { notify(err, 'error'); });
       },
-      moveEnd(e) {
-        console.log('moveEnd')
-        if (this.isMoving) {
-          e.preventDefault()
-          e.stopPropagation()
-          let distance = this.move.x - this.start.x
-          if (Math.abs(distance) > this.sensitivity) {
-            if (distance < 0) {
-              this.next()
-            } else {
-              this.prev()
-            }
-          } else {
-            this.back()
-          }
-          this.reset()
-          this.isMoving = false
+      toggleLike: function () {
+        var vm = this;
+        if (!util.loggedIn()) {
+          notify('请先登录后再点赞', 'error');
+          setTimeout(function () { location.href = '/login.html'; }, 220);
+          return;
         }
+        // 与旧版一致：PUT /blog/like/{id}，随后重新读取笔记与点赞列表
+        api.likeBlog(this.blog.id)
+          .then(function () { return api.blog(vm.blog.id); })
+          .then(function (fresh) {
+            vm.blog = fresh || vm.blog;
+            vm.queryLikeList(vm.blog.id);
+          })
+          .catch(function (err) { notify(err, 'error'); });
       },
-      next() {
-        let index = this.active + 1
-        // 运用动画切换到指定下标的子项
-        this.go(index)
+      imgFallback: function (e) {
+        e.target.src = '/imgs/placeholder.svg';
       },
-      prev() {
-        let index = this.active - 1
-        // 运用动画切换到指定下标的子项
-        this.go(index)
-      },
-      reset() {
-        this.start.x = 0
-        this.start.y = 0
-        this.move.x = 0
-        this.move.y = 0
-      },
-      back() {
-        this.setTransition()
-        this.setTransform()
-      },
-      destroy() {
-        this.setTransition('none')
-      },
-      // 运用动画切换到指定下标的子项
-      go(index) {
-        this.active = index
-        if (this.active < 0) {
-          this.active = 0
-        } else if (this.active > this.items.length - 1) {
-          this.active = this.items.length - 1
-        }
-        this.$emit('change', this.active)
-        this.setTransition()
-        this.setTransform()
+      avatarFallback: function (e) {
+        e.target.src = '/imgs/icons/default-icon.png';
       }
     }
-  })
+  });
 </script>
 </body>
 </html>
