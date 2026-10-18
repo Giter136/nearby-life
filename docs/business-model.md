@@ -207,7 +207,9 @@ POST /voucher/seckill  （后台新增秒杀券接口，前端不使用）
 | 我的资料读取 | 已实现；`tb_user_info` 默认空 |
 | 资料修改 | **未实现**（无更新接口） |
 | 图片上传/删除 | 已实现 |
-| 商铺详情/分类/搜索/GEO 距离 | 已实现（`ShopServiceImpl` 的 GEO 分页常量当前在源码中缺失，需后端自行处理） |
+| 商铺详情/搜索/优惠券 | 已实现 |
+| 商铺按类型列表 | **Controller 接错方法**：`ShopController#queryShopByType` 最后调用 `shopService.queryShopByName(typeId,current,x,y)`，而该实现直接 `return null`，所以 `GET /shop/of/type` 返回 200 空 body；应改为 `queryShopByType(...)` |
+| GEO 距离 | 逻辑已实现；需要先运行 `HmDianPingApplicationTests#test3` 把 `shop:geo:{typeId}` 写入 Redis，否则按距离分支返回空列表 |
 | 优惠券列表/秒杀下单 | 已实现（Lua + Kafka） |
 | 按人气/评分排序 | **未实现**：Controller 不接收 `sortBy`，前端只能对已加载页排序 |
 
@@ -236,6 +238,6 @@ POST /voucher/seckill  （后台新增秒杀券接口，前端不使用）
 - 关注时同步 `fans/followee` 计数。
 - 评论接口（如果 UI 要评论区）。
 - `/shop/of/type` 接收 `sortBy` 或移除前端排序入口。
-- `ShopServiceImpl` 的 `DEFAULT_BATCH_SIZE` 常量。
+- 修复 `ShopController#queryShopByType` 调错方法的问题（改为 `queryShopByType`）。
 
 > 本次改动**没有修改任何后端文件**；以上仅是前端在现有接口下的行为边界。

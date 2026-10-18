@@ -139,7 +139,8 @@
 | 详情页没有评论区 | `BlogCommentsController` 为空，评论接口未实现 |
 | 资料无法保存、档案多为空 | 没有用户资料更新接口；`tb_user_info` 种子数据为空，接口返回 `data: null` |
 | 粉丝/关注数不会增长 | 关注接口只写 `tb_follow` 与 Redis，没有同步 `tb_user_info.fans/followee` |
-| 商户列表分页常量缺失 | `ShopServiceImpl` 引用的 `DEFAULT_BATCH_SIZE` 在源码中未定义，GEO 分页分支需后端修复 |
+| 商户列表请求失败（200 空 body） | `ShopController#queryShopByType` 调用了 `IShopService.queryShopByName(Integer,Integer,Double,Double)`，该实现直接 `return null`；应改为 `queryShopByType(...)`。请求其实已到后端，只是 controller 没进 service，所以没有 SQL 日志 |
+| 商户列表按距离为空 | 需要 Redis 中存在 `shop:geo:{typeId}`；可运行 `HmDianPingApplicationTests#test3` 导入 |
 
 ## 8. 桌面端适配
 
@@ -158,7 +159,7 @@
   `.preview-shots/v2/`（已 gitignore）。
 - 用与真实 `LoginInterceptor` 一致的本地 mock 分别验证 **游客 / 已登录 / token 过期**：
   - 游客首页只请求 `/blog/hot`；分类区显示登录提示；
-  - 游客商户列表只请求 `/shop/of/type`，商户正常展示；
+  - 游客商户列表只请求 `/shop/of/type`；**mock 下商户正常展示**。真实后端该路由当前返回空 body（见第 7 节 controller 调错方法），修复前页面会提示“请求失败”；
   - 游客商户详情完全可用；
   - 游客笔记详情/作者主页各只触发一次预期 401，页面内显示登录提示；
   - 游客打开我的主页/资料档案/写笔记会跳到 `/login.html?redirect=...`；
