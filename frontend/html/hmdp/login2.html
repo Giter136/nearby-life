@@ -110,7 +110,7 @@
         api.login(this.form)
           .then(function (token) {
             if (token) sessionStorage.setItem('token', token);
-            location.href = '/index.html';
+            location.href = util.safeRedirect(util.getUrlParam('redirect'), '/index.html');
           })
           .catch(function (err) { notify(err, 'error'); });
       }

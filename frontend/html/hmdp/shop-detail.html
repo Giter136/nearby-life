@@ -35,7 +35,7 @@
           </div>
           <p class="figcap">
             <span class="figcap__no">FIG.{{ pad(active + 1) }}</span>
-            <span>商户实拍 · {{ shop.area || '杭州' }} / 共 {{ images.length }} 张</span>
+            <span>商户实拍 · {{ shop.area || '商圈未标注' }} / 共 {{ images.length }} 张</span>
           </p>
           <div class="gallery__thumbs" v-if="images.length > 1">
             <button
@@ -59,7 +59,7 @@
             <star-rating :value="(shop.score || 0) / 10" show-score :size="15"></star-rating>
             <span class="mono">{{ shop.comments || 0 }} 条评价</span>
             <span class="meta-dot" aria-hidden="true"></span>
-            <span class="mono">{{ shop.sold || 0 }} 人收藏</span>
+            <span class="mono">{{ shop.sold || 0 }} 已售</span>
           </div>
 
           <div class="facts">
@@ -69,15 +69,15 @@
             </div>
             <div class="fact">
               <p class="fact__label">所在区域</p>
-              <p class="fact__value">{{ shop.area || '杭州' }}</p>
+              <p class="fact__value">{{ shop.area || '商圈未标注' }}</p>
             </div>
             <div class="fact">
               <p class="fact__label">营业时间</p>
               <p class="fact__value">{{ shop.openHours || '以门店公告为准' }}</p>
             </div>
-            <div class="fact">
+            <div class="fact" v-if="distanceText">
               <p class="fact__label">距你</p>
-              <p class="fact__value mono">{{ distanceText || '—' }}</p>
+              <p class="fact__value mono">{{ distanceText }}</p>
             </div>
             <div class="fact" style="grid-column: 1 / -1">
               <p class="fact__label">门店地址</p>
@@ -138,7 +138,7 @@
           </article>
         </div>
 
-        <empty-state v-else-if="ready" title="暂无可用代金券" hint="这家店暂时没有上架优惠，先收藏下来吧。"></empty-state>
+        <empty-state v-else-if="ready" title="暂无可用代金券" hint="这家店暂时没有上架优惠。"></empty-state>
 
         <p class="detail__note">券面价格与有效期来自商户接口，下单前请以门店现场规则为准。演示项目，不产生真实交易。</p>
       </section>
@@ -235,8 +235,8 @@
       seckill: function (v) {
         var vm = this;
         if (!util.loggedIn()) {
-          notify('请先登录', 'error');
-          setTimeout(function () { location.href = '/login.html'; }, 220);
+          notify('请先登录后再抢购', 'error');
+          setTimeout(function () { util.goLogin(); }, 220);
           return;
         }
         if (this.statusOf(v) === 'before') {
@@ -257,7 +257,15 @@
             notify('抢购成功，订单号 ' + orderId, 'success');
             vm.queryVoucher(util.getUrlParam('id'));
           })
-          .catch(function (err) { notify(err, 'error'); });
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              notify('登录已过期，请重新登录', 'error');
+              setTimeout(function () { util.goLogin(); }, 260);
+              return;
+            }
+            notify(err, 'error');
+          });
       },
       imgFallback: function (e) {
         e.target.src = '/imgs/placeholder.svg';

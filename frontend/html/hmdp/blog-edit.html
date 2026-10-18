@@ -210,16 +210,20 @@
       checkLogin: function () {
         var vm = this;
         if (!util.loggedIn()) {
-          notify('请先登录', 'error');
-          setTimeout(function () { location.href = '/login.html'; }, 220);
+          location.replace(util.loginUrl());
           return;
         }
         // 与旧版一致：GET /user/me 校验登录态
-        api.me().catch(function () {
-          notify('登录已失效，请重新登录', 'error');
-          sessionStorage.removeItem('token');
-          setTimeout(function () { location.href = '/login.html'; }, 600);
-        });
+        api.me()
+          .then(function () {})
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              location.replace(util.loginUrl());
+              return;
+            }
+            notify(err, 'error');
+          });
       },
       queryShops: function () {
         var vm = this;
@@ -227,7 +231,14 @@
         // 与旧版一致：GET /shop/of/name?name=
         api.shopsByName(vm.shopName)
           .then(function (list) { vm.shops = list || []; })
-          .catch(function (err) { notify(err, 'error'); vm.shops = []; })
+          .catch(function (err) {
+            vm.shops = [];
+            if (err && err.auth) {
+              util.clearSession();
+              return;
+            }
+            notify(err, 'error');
+          })
           .then(function () { vm.shopLoading = false; });
       },
       selectShop: function (s) {
@@ -250,7 +261,15 @@
           .then(function (path) {
             vm.fileList.push('/imgs' + path);
           })
-          .catch(function (err) { notify(err, 'error'); })
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              notify('登录已过期，请重新登录', 'error');
+              setTimeout(function () { location.replace(util.loginUrl()); }, 260);
+              return;
+            }
+            notify(err, 'error');
+          })
           .then(function () {
             vm.uploading = false;
             input.value = '';
@@ -262,7 +281,14 @@
         // 与旧版一致：GET /upload/blog/delete?name=
         api.deleteBlogImage(name)
           .then(function () { vm.fileList.splice(i, 1); })
-          .catch(function (err) { notify(err, 'error'); });
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              location.replace(util.loginUrl());
+              return;
+            }
+            notify(err, 'error');
+          });
       },
       submitBlog: function () {
         var vm = this;
@@ -292,6 +318,12 @@
             setTimeout(function () { location.href = '/info.html'; }, 500);
           })
           .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              notify('登录已过期，请重新登录', 'error');
+              setTimeout(function () { location.replace(util.loginUrl()); }, 260);
+              return;
+            }
             notify(err, 'error');
             vm.publishing = false;
           });

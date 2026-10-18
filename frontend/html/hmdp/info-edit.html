@@ -24,12 +24,12 @@
 
       <header class="collection-head" style="border-bottom-width:3px">
         <div>
-          <span class="kicker collection-head__kicker">MEMBER FILE · 只读档案</span>
+          <span class="kicker collection-head__kicker">USER FILE · 只读档案</span>
           <h1 style="font-size:clamp(40px,4vw,56px)">资料档案</h1>
           <div class="collection-head__meta">
             <span class="mono">UID {{ user.id || '—' }}</span>
             <span class="meta-dot" aria-hidden="true"></span>
-            <span>杭州 · 拱墅</span>
+            <span>{{ info.city || '城市未填写' }}</span>
           </div>
         </div>
         <div class="collection-head__stamp" aria-hidden="true">档案<br>存根</div>
@@ -83,7 +83,7 @@
             </div>
             <div class="record__row">
               <span class="record__label">会员等级</span>
-              <span class="record__value">{{ info.level ? '尊享会员' : '普通会员' }}</span>
+              <span class="record__value">{{ memberText }}</span>
               <span class="record__flag"><app-icon name="lock" :size="11"></app-icon>只读</span>
             </div>
           </div>
@@ -99,7 +99,7 @@
           </div>
           <h2>关于这份档案</h2>
           <p>
-            档案数据来自用户详情接口，缓存于本次会话中。头像与昵称读取自当前登录用户。
+            档案信息来自你的账户资料，本次会话内会缓存一份。头像与昵称读取自当前登录用户。
           </p>
           <a class="btn btn--block" href="/info.html">返回我的主页</a>
           <a class="btn btn--block btn--ghost" href="/blog-edit.html" style="margin-top:8px">去写一篇笔记</a>
@@ -130,12 +130,17 @@
     },
     computed: {
       genderText: function () {
-        if (this.info.gender === true) return '男';
-        if (this.info.gender === false) return '女';
-        return '未填写';
+        return util.genderText(this.info.gender);
+      },
+      memberText: function () {
+        return util.memberText(this.info.level);
       }
     },
     created: function () {
+      if (!util.loggedIn()) {
+        location.replace(util.loginUrl());
+        return;
+      }
       this.checkLogin();
     },
     methods: {
@@ -153,7 +158,7 @@
             }
             vm.info = cached;
             vm.loading = false;
-            // 缓存缺失时用同一用户详情接口补齐（旧版未做，直接进入本页会显示空白）
+            // 缓存缺失时用同一用户详情接口补齐（没有 user_info 行时返回 null）
             if (!cached.userId && vm.user.id) {
               api.userInfo(vm.user.id)
                 .then(function (detail) {
@@ -161,13 +166,20 @@
                   vm.info = detail;
                   sessionStorage.setItem('userInfo', JSON.stringify(detail));
                 })
-                .catch(function (err) { notify(err, 'error'); });
+                .catch(function (err) {
+                  if (err && err.auth) return;
+                  notify(err, 'error');
+                });
             }
           })
           .catch(function (err) {
             vm.loading = false;
+            if (err && err.auth) {
+              util.clearSession();
+              location.replace(util.loginUrl());
+              return;
+            }
             notify(err, 'error');
-            setTimeout(function () { location.href = '/login.html'; }, 600);
           });
       },
       avatarFallback: function (e) {

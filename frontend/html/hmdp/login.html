@@ -121,7 +121,8 @@
         api.login(this.form)
           .then(function (token) {
             if (token) sessionStorage.setItem('token', token);
-            location.href = '/index.html';
+            // 从受保护页面跳来登录时，登录后回到原页面
+            location.href = util.safeRedirect(util.getUrlParam('redirect'), '/index.html');
           })
           .catch(function (err) { notify(err, 'error'); });
       },

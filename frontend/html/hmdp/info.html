@@ -28,17 +28,15 @@
             <img :src="user.icon || '/imgs/icons/default-icon.png'" :alt="user.nickName" @error="avatarFallback">
           </div>
           <div>
-            <span class="kicker">MEMBER FILE · 会员档案</span>
+            <span class="kicker">USER FILE · 用户档案</span>
             <h1 class="profile-name">{{ user.nickName }}</h1>
             <div class="profile-meta">
-              <span>杭州 · 拱墅</span>
+              <span>{{ info.city || '城市未填写' }}</span>
               <span class="meta-dot" aria-hidden="true"></span>
               <span class="mono">UID {{ user.id }}</span>
-              <span class="meta-dot" aria-hidden="true"></span>
-              <span class="mono">CITY LIFE MEMBER</span>
             </div>
             <div class="profile-stats">
-              <div><strong>{{ util.pad(blogs.length) }}</strong>笔记</div>
+              <div><strong>{{ util.pad(blogs.length) }}</strong>近期笔记</div>
               <div><strong>{{ info.fans || 0 }}</strong>粉丝</div>
               <div><strong>{{ info.followee || 0 }}</strong>关注</div>
             </div>
@@ -55,9 +53,7 @@
 
         <p class="profile-intro" v-reveal="60">
           <template v-if="info.introduce">{{ info.introduce }}</template>
-          <a v-else class="profile-intro__empty" href="/info-edit.html">
-            <app-icon name="edit" :size="13"></app-icon>还没有个人简介，去完善你的城市档案
-          </a>
+          <span v-else class="profile-intro__empty">还没有填写个人介绍。</span>
         </p>
 
         <div class="profile-grid">
@@ -78,6 +74,7 @@
                   :key="b.id"
                   :note="b"
                   variant="row"
+                  :show-author="false"
                   :index="i + 1"
                   :delay="(i % 4) * 50"
                   @like="likeNote"
@@ -100,6 +97,7 @@
                   @like="likeNote"
                 ></note-card>
               </div>
+              <empty-state v-else-if="feedUnavailable" title="关注动态暂不可用" hint="当前后端没有可用的关注动态接口。"></empty-state>
               <empty-state v-else-if="!feedLoading" title="关注的人还没有更新" hint="去首页看看，遇到喜欢的作者记得关注。">
                 <a class="btn btn--sm" href="/">去首页</a>
               </empty-state>
@@ -118,9 +116,9 @@
 
           <aside aria-label="档案信息">
             <section class="aside-card">
-              <div class="aside-card__head"><h2>会员档案</h2><span class="mono">FILE</span></div>
+              <div class="aside-card__head"><h2>用户档案</h2><span class="mono">FILE</span></div>
               <div class="record__row" style="grid-template-columns:70px 1fr;padding:14px 0">
-                <span class="record__label">城市</span><span class="record__value">{{ info.city || '杭州' }}</span>
+                <span class="record__label">城市</span><span class="record__value">{{ info.city || '未填写' }}</span>
               </div>
               <div class="record__row" style="grid-template-columns:70px 1fr;padding:14px 0">
                 <span class="record__label">性别</span><span class="record__value">{{ genderText }}</span>
@@ -130,6 +128,9 @@
               </div>
               <div class="record__row" style="grid-template-columns:70px 1fr;padding:14px 0">
                 <span class="record__label">积分</span><span class="record__value mono">{{ info.credits || 0 }}</span>
+              </div>
+              <div class="record__row" style="grid-template-columns:70px 1fr;padding:14px 0">
+                <span class="record__label">会员</span><span class="record__value">{{ memberText }}</span>
               </div>
               <a class="link-arrow" href="/info-edit.html" style="margin-top:16px">查看完整档案 <app-icon name="arrow-right" :size="12"></app-icon></a>
             </section>
@@ -169,6 +170,7 @@
       feed: [],
       feedLoading: false,
       feedHasMore: true,
+      feedUnavailable: false,
       // 与旧版一致的滚动分页参数
       params: {
         minTime: 0,
@@ -177,12 +179,17 @@
     },
     computed: {
       genderText: function () {
-        if (this.info.gender === true) return '男';
-        if (this.info.gender === false) return '女';
-        return '未填写';
+        return util.genderText(this.info.gender);
+      },
+      memberText: function () {
+        return util.memberText(this.info.level);
       }
     },
     created: function () {
+      if (!util.loggedIn()) {
+        location.replace(util.loginUrl());
+        return;
+      }
       this.queryUser();
     },
     methods: {
@@ -201,20 +208,27 @@
           })
           .catch(function (err) {
             vm.loadingProfile = false;
+            if (err && err.auth) {
+              util.clearSession();
+              location.replace(util.loginUrl());
+              return;
+            }
             notify(err, 'error');
-            setTimeout(function () { location.href = '/login.html'; }, 600);
           });
       },
       queryUserInfo: function () {
         var vm = this;
-        // 与旧版一致：GET /user/info/{id}
+        // 与旧版一致：GET /user/info/{id}（没有 user_info 行时返回 null）
         api.userInfo(vm.user.id)
           .then(function (data) {
             if (!data) return;
             vm.info = data;
             sessionStorage.setItem('userInfo', JSON.stringify(data));
           })
-          .catch(function (err) { notify(err, 'error'); });
+          .catch(function (err) {
+            if (err && err.auth) return;
+            notify(err, 'error');
+          });
       },
       queryBlogs: function () {
         var vm = this;
@@ -226,6 +240,11 @@
           })
           .catch(function (err) {
             vm.loadingProfile = false;
+            if (err && err.auth) {
+              util.clearSession();
+              location.replace(util.loginUrl());
+              return;
+            }
             notify(err, 'error');
           });
       },
@@ -236,6 +255,7 @@
           vm.params.minTime = new Date().getTime() + 1;
           vm.feed = [];
           vm.feedHasMore = true;
+          vm.feedUnavailable = false;
         }
         if (vm.feedLoading) return;
         vm.feedLoading = true;
@@ -253,13 +273,23 @@
           })
           .catch(function (err) {
             vm.feedHasMore = false;
+            if (err && err.auth) {
+              util.clearSession();
+              location.replace(util.loginUrl());
+              return;
+            }
+            if (err && err.status === 404) {
+              // 后端实际映射为 /blog/blog/of/follow，此接口当前不可用
+              vm.feedUnavailable = true;
+              return;
+            }
             notify(err, 'error');
           })
           .then(function () { vm.feedLoading = false; });
       },
       switchTab: function (tab) {
         this.tab = tab;
-        if (tab === 'feed' && !this.feed.length) this.queryFeed(true);
+        if (tab === 'feed' && !this.feed.length && !this.feedUnavailable) this.queryFeed(true);
       },
       loadFeedMore: function () {
         if (!this.feedLoading && this.feedHasMore) this.queryFeed(false);
@@ -272,12 +302,21 @@
             note.liked = fresh.liked;
             note.isLike = fresh.isLike;
           })
-          .catch(function (err) { notify(err, 'error'); });
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              notify('登录已过期，请重新登录', 'error');
+              setTimeout(function () { location.replace(util.loginUrl()); }, 260);
+              return;
+            }
+            notify(err, 'error');
+          });
       },
       logout: function () {
-        // 与旧版一致：POST /user/logout；本地会话无论如何都清理
+        // 与旧版一致：POST /user/logout；后端目前返回“功能未完成”，
+        // 但退出是本地会话行为，仍然清理 token 并回首页
         api.logout().catch(function () {}).then(function () {
-          sessionStorage.removeItem('token');
+          util.clearSession();
           notify('已退出登录', 'success');
           setTimeout(function () { location.href = '/'; }, 400);
         });

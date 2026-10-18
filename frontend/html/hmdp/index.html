@@ -27,13 +27,13 @@
           </a>
           <p class="figcap">
             <span class="figcap__no">FIG.01</span>
-            <span>本期头图 · 杭州 · 拱墅 / 图文来自作者笔记</span>
+            <span>本期头图 · 图文来自作者笔记</span>
           </p>
           <h1 class="lead__title"><a :href="blogUrl(lead)">{{ lead.title }}</a></h1>
           <p class="lead__excerpt">{{ excerpt(lead.content) }}</p>
           <div class="byline">
             <img class="avatar avatar--sm" :src="lead.icon || '/imgs/icons/default-icon.png'" alt="" @error="avatarFallback">
-            <span class="byline__author">{{ lead.name || '匿名作者' }}</span>
+            <span class="byline__author">{{ lead.name || '作者' }}</span>
             <span class="meta-dot" aria-hidden="true"></span>
             <span class="mono">{{ util.formatMonthDay(lead.createTime) }}</span>
             <span class="meta-dot" aria-hidden="true"></span>
@@ -44,7 +44,7 @@
         <aside class="rail" aria-label="城市索引与热门榜单">
           <section class="rail__block" v-reveal="60">
             <h2 class="rail-title"><span>城市索引</span><em>INDEX</em></h2>
-            <ul class="cat-list">
+            <ul class="cat-list" v-if="types.length">
               <li v-for="(t, i) in types" :key="t.id">
                 <a class="cat-row" :href="catUrl(t)">
                   <span class="cat-row__no mono">{{ pad(i + 1) }}</span>
@@ -54,17 +54,26 @@
                 </a>
               </li>
             </ul>
-            <p class="rail__note">按类目翻阅城市：每一类都是一份独立的地方索引。</p>
+            <p v-if="types.length" class="rail__note">按类目翻阅城市：每一类都是一份独立的地方索引。</p>
+            <div v-else class="rail__note">
+              <template v-if="logged && !typesForbidden">
+                <p>分类加载失败，请刷新重试。</p>
+              </template>
+              <template v-else>
+                <p>登录后可按类别翻阅城市。</p>
+                <a class="link-arrow" :href="loginUrl()">去登录 <app-icon name="arrow-right" :size="12"></app-icon></a>
+              </template>
+            </div>
           </section>
 
           <section class="rail__block" v-reveal="120">
-            <h2 class="rail-title"><span>热门笔记</span><em>RANK</em></h2>
+            <h2 class="rail-title"><span>点赞榜</span><em>RANK</em></h2>
             <ol>
               <li class="rank__item" v-for="(b, i) in ranked" :key="b.id">
                 <span class="rank__no mono">{{ pad(i + 1) }}</span>
                 <div>
                   <h3 class="rank__title"><a :href="blogUrl(b)">{{ b.title }}</a></h3>
-                  <p class="rank__meta"><span class="mono">{{ b.liked || 0 }}</span> 赞 · {{ b.name || '匿名作者' }}</p>
+                  <p class="rank__meta"><span class="mono">{{ b.liked || 0 }}</span> 赞 · {{ b.name || '作者' }}</p>
                 </div>
               </li>
             </ol>
@@ -76,14 +85,14 @@
       <!-- 笔记流 -->
       <section class="feed" aria-labelledby="feed-title">
         <header class="section-head">
-          <h2 id="feed-title">最新笔记</h2>
-          <span class="section-head__note">NOTES / 每页十则</span>
+          <h2 id="feed-title">热门笔记</h2>
+          <span class="section-head__note">HOT NOTES / 按点赞排序</span>
           <span class="section-head__rule" aria-hidden="true"></span>
           <span class="section-head__count mono">{{ pad(current) }}</span>
         </header>
 
         <div v-if="!notes.length && !loading && ready">
-          <empty-state title="还没有人写下笔记" hint="成为第一个记录杭州的人。">
+          <empty-state title="还没有热门笔记" hint="等笔记获得点赞后，会出现在这里。">
             <a class="btn btn--sm" href="/blog-edit.html">去写一篇</a>
           </empty-state>
         </div>
@@ -109,7 +118,7 @@
             <app-icon name="arrow-down" :size="15"></app-icon>
           </button>
         </div>
-        <p class="feed-end" v-else-if="ready && notes.length">本期笔记已读完 · 城市仍在继续</p>
+        <p class="feed-end" v-else-if="ready && notes.length">本期热门笔记已读完 · 城市仍在继续</p>
       </section>
 
     </div>
@@ -129,12 +138,16 @@
       util: util,
       ready: false,
       types: [],
+      typesForbidden: false,
       blogs: [],
       current: 1,
       loading: false,
       hasMore: true
     },
     computed: {
+      logged: function () {
+        return util.loggedIn();
+      },
       lead: function () {
         return this.blogs[0] || null;
       },
@@ -149,11 +162,17 @@
       }
     },
     created: function () {
-      this.queryTypes();
+      // 首页笔记流是公开的（/blog/hot）。
+      // 城市分类接口在当前登录拦截器下是受保护的，游客不请求它，
+      // 避免一次分类请求把整页踢回登录页；有 token 时再取。
+      if (util.loggedIn()) this.queryTypes();
       this.queryHotBlogs();
     },
     methods: {
       pad: util.pad,
+      loginUrl: function () {
+        return util.loginUrl();
+      },
       catUrl: function (t) {
         return '/shop-list.html?type=' + t.id + '&name=' + encodeURIComponent(t.name);
       },
@@ -167,7 +186,15 @@
         var vm = this;
         api.shopTypes()
           .then(function (list) { vm.types = list || []; })
-          .catch(function (err) { notify(err, 'error'); });
+          .catch(function (err) {
+            if (err && err.auth) {
+              // token 失效：按游客继续浏览，不打断页面
+              util.clearSession();
+              vm.typesForbidden = true;
+              return;
+            }
+            notify(err, 'error');
+          });
       },
       queryHotBlogs: function () {
         var vm = this;
@@ -198,7 +225,7 @@
         var vm = this;
         if (!util.loggedIn()) {
           notify('请先登录后再点赞', 'error');
-          setTimeout(function () { location.href = '/login.html'; }, 220);
+          setTimeout(function () { util.goLogin(); }, 220);
           return;
         }
         api.likeBlog(note.id)
@@ -207,7 +234,15 @@
             note.liked = fresh.liked;
             note.isLike = fresh.isLike;
           })
-          .catch(function (err) { notify(err, 'error'); });
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              notify('登录已过期，请重新登录', 'error');
+              setTimeout(function () { util.goLogin(); }, 260);
+              return;
+            }
+            notify(err, 'error');
+          });
       },
       imgFallback: function (e) {
         e.target.src = '/imgs/placeholder.svg';

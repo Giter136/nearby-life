@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -40,9 +40,9 @@
                 @error="avatarFallback"
               >
               <div>
-                <a class="article__author" :href="authorUrl">{{ blog.name || '匿名作者' }}</a>
+                <a class="article__author" :href="authorUrl">{{ blog.name || '作者' }}</a>
                 <div class="mono" style="font-size:10.5px;color:var(--ink-mute);margin-top:2px">
-                  {{ util.formatDate(blog.createTime) }} · 写于杭州
+                  {{ util.formatDate(blog.createTime) }} · 发布于黑马点评
                 </div>
               </div>
               <button
@@ -95,7 +95,7 @@
                 <h3 class="shop-card__name">{{ shop.name }}</h3>
                 <div class="shop-card__meta">
                   <star-rating :value="(shop.score || 0) / 10" :size="12"></star-rating>
-                  <span class="mono">¥{{ shop.avgPrice }} / 人</span>
+                  <span class="mono">¥{{ shop.avgPrice || 0 }} / 人</span>
                   <span class="mono">{{ shop.comments }} 条评价</span>
                 </div>
                 <p class="shop-card__addr">{{ shop.address }}</p>
@@ -126,7 +126,7 @@
                 @error="avatarFallback"
               >
               <div>
-                <div class="author-card__name">{{ blog.name || '匿名作者' }}</div>
+                <div class="author-card__name">{{ blog.name || '作者' }}</div>
                 <div class="mono" style="font-size:10px;color:var(--ink-mute)">城市记录者</div>
               </div>
             </div>
@@ -151,7 +151,8 @@
                 @error="avatarFallback"
               >
             </div>
-            <p v-else class="publish-note" style="margin-bottom:16px">还没有人点赞，做第一个。</p>
+            <p v-if="!logged" class="publish-note" style="margin-bottom:16px">登录后可查看点赞的人。</p>
+            <p v-else-if="!likes.length" class="publish-note" style="margin-bottom:16px">还没有人点赞，做第一个。</p>
             <button class="btn btn--block" :class="blog.isLike ? 'btn--ghost' : 'btn--primary'" type="button" @click="toggleLike">
               <app-icon name="thumb" :size="14"></app-icon>{{ blog.isLike ? '取消点赞' : '点赞' }}
             </button>
@@ -165,6 +166,17 @@
           </section>
         </aside>
       </div>
+
+      <template v-else-if="needLogin && !loading">
+        <h1 class="sr-only">登录后查看这篇笔记</h1>
+        <empty-state
+          title="登录后查看这篇笔记"
+          :hint="loginHint"
+        >
+          <a class="btn btn--sm btn--primary" :href="loginHref">登录后继续</a>
+          <a class="btn btn--sm" href="/">回到首页</a>
+        </empty-state>
+      </template>
 
       <empty-state v-else-if="!loading" title="这篇笔记找不到了" hint="它可能被作者删除，或者链接已经失效。">
         <a class="btn btn--sm" href="/">回到首页</a>
@@ -185,6 +197,8 @@
     data: {
       util: util,
       loading: false,
+      needLogin: false,
+      authExpired: false,
       blog: {},
       shop: {},
       likes: [],
@@ -196,11 +210,24 @@
       images: function () {
         return util.imageList(this.blog.images);
       },
+      logged: function () {
+        return util.loggedIn();
+      },
       showFollow: function () {
         return !!this.user.id && this.user.id !== this.blog.userId;
       },
       authorUrl: function () {
-        return this.blog.userId ? '/other-info.html?id=' + this.blog.userId : '/';
+        if (!this.blog.userId) return '/';
+        if (this.user.id && this.user.id === this.blog.userId) return '/info.html';
+        return '/other-info.html?id=' + this.blog.userId;
+      },
+      loginHref: function () {
+        return util.loginUrl();
+      },
+      loginHint: function () {
+        return this.authExpired
+          ? '登录状态已失效，重新登录后会回到这篇笔记。'
+          : '这篇笔记需要登录后查看，登录后会回到这里。';
       }
     },
     created: function () {
@@ -219,10 +246,23 @@
           .then(function (data) {
             vm.blog = data || {};
             if (vm.blog.shopId) vm.queryShopById(vm.blog.shopId);
-            vm.queryLikeList(id);
-            vm.queryLoginUser();
+            // 点赞列表和当前用户都是登录态数据，游客不请求
+            if (util.loggedIn()) {
+              vm.queryLikeList(id);
+              vm.queryLoginUser();
+            }
           })
-          .catch(function (err) { notify(err, 'error'); })
+          .catch(function (err) {
+            if (err && err.auth) {
+              // 当前后端对 /blog/{id} 也走登录拦截器；不在全局拦截器里跳转，
+              // 由页面给出“登录后查看”的说明，保留返回首页的出口。
+              vm.authExpired = util.loggedIn();
+              util.clearSession();
+              vm.needLogin = true;
+              return;
+            }
+            notify(err, 'error');
+          })
           .then(function () { vm.loading = false; });
       },
       queryShopById: function (shopId) {
@@ -234,14 +274,20 @@
       },
       queryLikeList: function (id) {
         var vm = this;
+        if (!util.loggedIn()) return;
         // 与旧版一致：GET /blog/likes/{id}
         api.blogLikes(id)
           .then(function (list) { vm.likes = list || []; })
-          .catch(function (err) { notify(err, 'error'); });
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              return;
+            }
+            notify(err, 'error');
+          });
       },
       queryLoginUser: function () {
         var vm = this;
-        // 未登录时不请求 /user/me，避免拦截器把访客强制送去登录页
         if (!util.loggedIn()) {
           vm.user = {};
           return;
@@ -252,21 +298,29 @@
             vm.user = user || {};
             if (vm.user.id !== vm.blog.userId) vm.isFollowed();
           })
-          .catch(function () {});
+          .catch(function (err) {
+            if (err && err.auth) util.clearSession();
+          });
       },
       isFollowed: function () {
         var vm = this;
-        if (!this.blog.userId) return;
+        if (!util.loggedIn() || !this.blog.userId) return;
         // 与旧版一致：GET /follow/or/not/{userId}
         api.isFollow(this.blog.userId)
           .then(function (flag) { vm.followed = !!flag; })
-          .catch(function (err) { notify(err, 'error'); });
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              return;
+            }
+            notify(err, 'error');
+          });
       },
       follow: function () {
         var vm = this;
         if (!util.loggedIn()) {
           notify('请先登录', 'error');
-          setTimeout(function () { location.href = '/login.html'; }, 220);
+          setTimeout(function () { util.goLogin(); }, 220);
           return;
         }
         // 与旧版一致：PUT /follow/{userId}/{isFollow}
@@ -275,13 +329,21 @@
             notify(vm.followed ? '已取消关注' : '已关注', 'success');
             vm.followed = !vm.followed;
           })
-          .catch(function (err) { notify(err, 'error'); });
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              notify('登录已过期，请重新登录', 'error');
+              setTimeout(function () { util.goLogin(); }, 260);
+              return;
+            }
+            notify(err, 'error');
+          });
       },
       toggleLike: function () {
         var vm = this;
         if (!util.loggedIn()) {
           notify('请先登录后再点赞', 'error');
-          setTimeout(function () { location.href = '/login.html'; }, 220);
+          setTimeout(function () { util.goLogin(); }, 220);
           return;
         }
         // 与旧版一致：PUT /blog/like/{id}，随后重新读取笔记与点赞列表
@@ -291,7 +353,15 @@
             vm.blog = fresh || vm.blog;
             vm.queryLikeList(vm.blog.id);
           })
-          .catch(function (err) { notify(err, 'error'); });
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              notify('登录已过期，请重新登录', 'error');
+              setTimeout(function () { util.goLogin(); }, 260);
+              return;
+            }
+            notify(err, 'error');
+          });
       },
       imgFallback: function (e) {
         e.target.src = '/imgs/placeholder.svg';

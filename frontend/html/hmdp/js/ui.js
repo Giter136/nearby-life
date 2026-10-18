@@ -145,6 +145,45 @@
       return !!sessionStorage.getItem(global.TOKEN_KEY || 'token');
     },
 
+    // 清空本地会话（token 失效或主动退出时）
+    clearSession: function () {
+      sessionStorage.removeItem(global.TOKEN_KEY || 'token');
+      sessionStorage.removeItem('userInfo');
+    },
+
+    // 登录页地址，带“登录后回到哪里”
+    loginUrl: function (target) {
+      var back = target || (location.pathname + location.search);
+      return '/login.html?redirect=' + encodeURIComponent(back);
+    },
+
+    // 只允许站内绝对路径，防止开放重定向
+    safeRedirect: function (target, fallback) {
+      if (typeof target === 'string' && target.charAt(0) === '/' && target.charAt(1) !== '/') {
+        return target;
+      }
+      return fallback || '/index.html';
+    },
+
+    goLogin: function (target) {
+      location.href = util.loginUrl(target);
+    },
+
+    // 后端 tb_user_info.gender：0 男、1 女；接口序列化为 Boolean
+    genderText: function (gender) {
+      if (gender === true) return '女';
+      if (gender === false) return '男';
+      return '未填写';
+    },
+
+    // 后端 tb_user_info.level 原为 0~9，实体目前映射成 Boolean，
+    // 只能在接口能给出的范围内表达“是否开通”
+    memberText: function (level) {
+      if (level === true) return '已开通会员';
+      if (level === false) return '普通用户';
+      return '未填写';
+    },
+
     isWithin: function (begin, end) {
       var now = Date.now();
       var b = util.parseDate(begin);
@@ -161,6 +200,12 @@
    * =======================================================*/
   var toastTimer = 0;
   function notify(message, type) {
+    if (message && typeof message === 'object' && message.message) {
+      message = message.message;
+    }
+    if (message === null || message === undefined || message === '') {
+      message = '操作未完成';
+    }
     var host = document.querySelector('.toast-host');
     if (!host) {
       host = document.createElement('div');
@@ -175,7 +220,7 @@
     mark.textContent = type === 'error' ? '!' : type === 'success' ? '✓' : 'i';
     var text = document.createElement('span');
     text.className = 'toast__text';
-    text.textContent = message;
+    text.textContent = String(message);
     item.appendChild(mark);
     item.appendChild(text);
     host.appendChild(item);
@@ -276,6 +321,11 @@
     data: function () {
       return { date: util.today(), logged: util.loggedIn() };
     },
+    computed: {
+      loginHref: function () {
+        return util.loginUrl();
+      }
+    },
     template:
       '<header class="masthead" :class="\'masthead--\' + mode">' +
       '  <div class="shell masthead__bar">' +
@@ -298,7 +348,7 @@
       '        <li><a href="/blog-edit.html" :class="{ \'is-active\': active === \'write\' }"><span class="mono">03</span>写笔记</a></li>' +
       '      </ul>' +
       '      <div class="nav__util">' +
-      '        <a v-if="!logged" class="nav__auth" href="/login.html">登录</a>' +
+      '        <a v-if="!logged" class="nav__auth" :href="loginHref">登录</a>' +
       '        <a v-else class="nav__auth" href="/info.html">个人主页</a>' +
       '      </div>' +
       '    </div>' +
@@ -329,6 +379,11 @@
     data: function () {
       return { year: new Date().getFullYear() };
     },
+    computed: {
+      loginHref: function () {
+        return util.loginUrl();
+      }
+    },
     template:
       '<footer class="footer">' +
       '  <div class="shell footer__inner">' +
@@ -348,7 +403,7 @@
       '        <p class="footer__label mono">个人</p>' +
       '        <a href="/info.html">我的主页</a>' +
       '        <a href="/blog-edit.html">写笔记</a>' +
-      '        <a href="/login.html">登录</a>' +
+      '        <a :href="loginHref">登录</a>' +
       '      </div>' +
       '      <div class="footer__col">' +
       '        <p class="footer__label mono">关于</p>' +
@@ -396,10 +451,12 @@
       '    <span class="note__no mono">{{ index ? String(index).padStart(2, \'0\') : \'\' }}</span>' +
       '    <h3 class="note__title serif"><a :href="href">{{ note.title }}</a></h3>' +
       '    <p v-if="excerpt" class="note__excerpt">{{ excerpt }}</p>' +
-      '    <div v-if="showAuthor" class="note__meta">' +
-      '      <img class="avatar avatar--xs" :src="note.icon || \'/imgs/icons/default-icon.png\'" alt="">' +
-      '      <span class="note__author">{{ note.name || \'匿名用户\' }}</span>' +
-      '      <span class="meta-dot" aria-hidden="true"></span>' +
+      '    <div class="note__meta">' +
+      '      <template v-if="showAuthor && note.name">' +
+      '        <img class="avatar avatar--xs" :src="note.icon || \'/imgs/icons/default-icon.png\'" alt="">' +
+      '        <span class="note__author">{{ note.name }}</span>' +
+      '        <span class="meta-dot" aria-hidden="true"></span>' +
+      '      </template>' +
       '      <button class="note__like" type="button" :class="{ \'is-liked\': note.isLike }" @click.prevent.stop="$emit(\'like\', note)" :aria-label="\'点赞\' + (note.title || \'\')">' +
       '        <app-icon name="thumb" :size="13"></app-icon><span class="mono">{{ note.liked || 0 }}</span>' +
       '      </button>' +

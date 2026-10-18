@@ -2,20 +2,31 @@
  * 黑马点评 · API 访问层
  * ---------------------------------------------------------------
  * 本文件是前端访问后端的唯一入口，所有请求路径、请求方式、
- * 查询参数均与重写前页面中的调用保持一一对应，不做任何合并、
- * 改名或新增。
+ * 查询参数均与后端既有控制器一一对应，不做合并、改名或新增。
  *
  * 响应约定：
  *   { success: Boolean, errorMsg: String, data: Any, total: Long }
  *   - 成功时 resolve 后端 data 字段
- *   - 失败时 reject errorMsg（或「请先登录」「服务器异常」）
- *   - HTTP 401 时跳转登录页，与旧版拦截器行为一致
+ *   - 失败时 reject Error（message 为后端 errorMsg）
+ *   - HTTP 401 时 reject Error 并标记 err.auth = true
+ *
+ * 注意：拦截器不再“全局 401 就跳登录页”。
+ * 后端只放行 /user/code、/user/login、/blog/hot、/shop/**、
+ * /voucher/list/**；其余接口对游客返回 401。哪些页面需要登录
+ * 应由页面按业务决定，而不是让一次辅助请求把整页踢走。
  */
 (function (global) {
   'use strict';
 
   var BASE_URL = '/api';
   var TOKEN_KEY = 'token';
+
+  function makeError(message, auth, status) {
+    var err = new Error(message || '请求失败');
+    err.auth = !!auth;
+    err.status = status || 0;
+    return err;
+  }
 
   var http = axios.create({
     baseURL: BASE_URL,
@@ -44,18 +55,19 @@
     function (response) {
       var body = response.data;
       if (!body || body.success !== true) {
-        return Promise.reject((body && body.errorMsg) || '请求失败');
+        return Promise.reject(makeError((body && body.errorMsg) || '请求失败', false, response.status));
       }
       return body;
     },
     function (error) {
-      if (error.response && error.response.status === 401) {
-        setTimeout(function () {
-          location.href = '/login.html';
-        }, 200);
-        return Promise.reject('请先登录');
+      var status = error && error.response && error.response.status;
+      if (status === 401) {
+        return Promise.reject(makeError('请先登录', true, 401));
       }
-      return Promise.reject('服务器异常');
+      if (status === 404) {
+        return Promise.reject(makeError('接口不存在', false, 404));
+      }
+      return Promise.reject(makeError('服务器异常', false, status || 0));
     }
   );
 
@@ -66,6 +78,12 @@
   }
 
   var api = {
+    isAuthError: function (err) {
+      return !!(err && err.auth);
+    },
+    isNotFound: function (err) {
+      return !!(err && err.status === 404);
+    },
     /* ---------------- 商户类型 ---------------- */
     // GET /shop-type/list
     shopTypes: function () {

@@ -27,7 +27,7 @@
           <span class="kicker collection-head__kicker">MERCHANTS · 分类索引</span>
           <h1>{{ typeName || '商户' }}</h1>
           <div class="collection-head__meta">
-            <span class="mono">已有 {{ pad(shops.length) }} 家</span>
+            <span class="mono">已加载 {{ pad(shops.length) }} 家</span>
             <span class="meta-dot" aria-hidden="true"></span>
             <span>杭州 · 拱墅</span>
             <span class="meta-dot" aria-hidden="true"></span>
@@ -40,11 +40,11 @@
       <div class="toolbar">
         <div class="toolbar__left">
           <div class="type-picker">
-            <button class="type-picker__btn" type="button" :aria-expanded="pickerOpen ? 'true' : 'false'" aria-haspopup="true" @click="pickerOpen = !pickerOpen">
-              <span>{{ typeName || '选择类别' }}</span>
+            <button class="type-picker__btn" type="button" :aria-expanded="pickerOpen ? 'true' : 'false'" aria-haspopup="true" @click="togglePicker">
+              <span>{{ typeBtnLabel }}</span>
               <app-icon name="chevron-down" :size="14"></app-icon>
             </button>
-            <div class="type-picker__menu" v-show="pickerOpen" role="menu">
+            <div class="type-picker__menu" v-show="pickerOpen && types.length" role="menu">
               <button
                 v-for="(t, i) in types"
                 :key="t.id"
@@ -63,7 +63,7 @@
             <button type="button" role="tab" :aria-selected="params.sortBy === 'score'" :class="{ 'is-active': params.sortBy === 'score' }" @click="sortAndQuery('score')">评分</button>
           </div>
         </div>
-        <span class="toolbar__count mono">按距离 · N {{ util.coord(params.y) }} · E {{ util.coord(params.x) }}</span>
+        <span class="toolbar__count mono">{{ sortHint }}</span>
       </div>
 
       <div class="collection">
@@ -82,7 +82,7 @@
                   <star-rating :value="(s.score || 0) / 10" show-score :size="13"></star-rating>
                   <span class="mono">{{ s.comments || 0 }} 条评价</span>
                   <span class="meta-dot" aria-hidden="true"></span>
-                  <span class="mono">{{ s.sold || 0 }} 人收藏</span>
+                  <span class="mono">{{ s.sold || 0 }} 已售</span>
                 </div>
                 <p class="shop-row__addr">
                   <app-icon name="pin" :size="13"></app-icon>
@@ -102,7 +102,7 @@
           </ol>
 
           <empty-state v-if="!loading && ready && !shops.length" title="这一类还没有商户" hint="换一个类别，或者稍后再来看看。">
-            <button class="btn btn--sm" type="button" @click="pickerOpen = true">换一类</button>
+            <button class="btn btn--sm" type="button" @click="togglePicker">换一类</button>
           </empty-state>
 
           <div v-if="loading && shops.length" class="loading" role="status">
@@ -115,20 +115,20 @@
               <app-icon name="arrow-down" :size="15"></app-icon>
             </button>
           </div>
-          <p class="feed-end" v-else-if="ready && shops.length">这一类已翻阅完 · 共 {{ shops.length }} 家</p>
+          <p class="feed-end" v-else-if="ready && shops.length">这一类已翻阅完 · 已加载 {{ shops.length }} 家</p>
         </div>
 
         <aside class="collection__aside">
           <section class="aside-card">
             <div class="aside-card__head">
-              <h2>本类热门</h2><span class="mono">RANK</span>
+              <h2>本页人气</h2><span class="mono">RANK</span>
             </div>
             <ol>
               <li class="rank__item" v-for="(s, i) in popular" :key="s.id">
                 <span class="rank__no mono">{{ pad(i + 1) }}</span>
                 <div>
                   <h3 class="rank__title"><a :href="detailUrl(s)">{{ s.name }}</a></h3>
-                  <p class="rank__meta"><span class="mono">{{ s.comments }}</span> 条评价 · {{ s.area || '杭州' }}</p>
+                  <p class="rank__meta"><span class="mono">{{ s.comments }}</span> 条评价 · {{ s.area || '商圈未标注' }}</p>
                 </div>
               </li>
             </ol>
@@ -139,17 +139,24 @@
             <div class="aside-card__head">
               <h2>换一类</h2><span class="mono">INDEX</span>
             </div>
-            <a
-              class="mini-type"
-              v-for="t in types"
-              :key="t.id"
-              :href="'/shop-list.html?type=' + t.id + '&name=' + encodeURIComponent(t.name)"
-              :class="{ 'is-active': String(t.id) === String(params.typeId) }"
-            >
-              <span>{{ t.name }}</span>
-              <span class="mono" v-if="String(t.id) === String(params.typeId)">当前</span>
-              <span class="mono" v-else>→</span>
-            </a>
+            <template v-if="types.length">
+              <a
+                class="mini-type"
+                v-for="t in types"
+                :key="t.id"
+                :href="'/shop-list.html?type=' + t.id + '&name=' + encodeURIComponent(t.name)"
+                :class="{ 'is-active': String(t.id) === String(params.typeId) }"
+              >
+                <span>{{ t.name }}</span>
+                <span class="mono" v-if="String(t.id) === String(params.typeId)">当前</span>
+                <span class="mono" v-else>→</span>
+              </a>
+            </template>
+            <p v-else-if="!logged || typesForbidden" class="rail__note">
+              切换类别需要登录。
+              <a class="link-arrow" :href="loginUrl()">去登录 <app-icon name="arrow-right" :size="12"></app-icon></a>
+            </p>
+            <p v-else class="rail__note">分类加载失败，请刷新重试。</p>
           </section>
         </aside>
       </div>
@@ -173,6 +180,8 @@
       ready: false,
       hasMore: true,
       types: [],
+      typesLoading: false,
+      typesForbidden: false,
       shops: [],
       typeName: '',
       // 与重写前完全一致的查询参数
@@ -185,6 +194,20 @@
       }
     },
     computed: {
+      logged: function () {
+        return util.loggedIn();
+      },
+      typeBtnLabel: function () {
+        if (this.types.length) return this.typeName || '选择类别';
+        if (!this.logged || this.typesForbidden) return '登录后切换类别';
+        if (this.typesLoading) return '正在读取类别';
+        return '类别加载失败';
+      },
+      sortHint: function () {
+        if (this.params.sortBy === 'comments') return '人气 · 仅对已加载商户排序';
+        if (this.params.sortBy === 'score') return '评分 · 仅对已加载商户排序';
+        return '按距离 · N ' + util.coord(this.params.y) + ' · E ' + util.coord(this.params.x);
+      },
       sortedShops: function () {
         var list = this.shops.slice();
         if (this.params.sortBy === 'comments') {
@@ -210,7 +233,9 @@
     created: function () {
       this.params.typeId = util.getUrlParam('type') || 0;
       this.typeName = util.getUrlParam('name');
-      this.queryTypes();
+      // 商户列表本身是公开的（/shop/**）；分类列表接口受登录拦截器保护，
+      // 游客不请求，仍可按 URL 中的类别浏览商户。
+      if (util.loggedIn()) this.queryTypes();
       this.queryShops();
     },
     mounted: function () {
@@ -221,6 +246,25 @@
     },
     methods: {
       pad: util.pad,
+      loginUrl: function () {
+        return util.loginUrl();
+      },
+      togglePicker: function () {
+        if (this.types.length) {
+          this.pickerOpen = !this.pickerOpen;
+          return;
+        }
+        if (!util.loggedIn()) {
+          util.goLogin();
+          return;
+        }
+        if (this.typesForbidden) {
+          util.goLogin();
+          return;
+        }
+        if (this.typesLoading) return;
+        notify('分类加载失败，请刷新重试', 'error');
+      },
       onDocClick: function (e) {
         if (this.pickerOpen && !this.$el.querySelector('.type-picker').contains(e.target)) {
           this.pickerOpen = false;
@@ -237,9 +281,18 @@
       },
       queryTypes: function () {
         var vm = this;
+        vm.typesLoading = true;
         api.shopTypes()
           .then(function (list) { vm.types = list || []; })
-          .catch(function (err) { notify(err, 'error'); });
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              vm.typesForbidden = true;
+              return;
+            }
+            notify(err, 'error');
+          })
+          .then(function () { vm.typesLoading = false; });
       },
       queryShops: function () {
         var vm = this;
