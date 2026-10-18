@@ -1,0 +1,56 @@
+/* warm-product-web · design tokens
+   Pair with self-hosted Instrument Serif (400 + italic) and Manrope (variable).
+   Both are OFL-licensed; keep their license files when redistributing. */
+
+:root {
+  /* surface */
+  --cream: #f6f3e9;
+  --cream-deep: #efeadd;
+  --paper: #fbf9f3;
+  --white: #fffdf8;
+
+  /* ink & brand */
+  --ink: #1b1c17;
+  --ink-soft: #3e3f35;
+  --muted: #6d6e60;
+  --olive: #5f6249;
+  --olive-deep: #464936;
+  --olive-soft: #8b8e74;
+  --terracotta: #c46a4a;
+  --line: rgba(27, 28, 23, 0.14);
+  --line-strong: rgba(27, 28, 23, 0.34);
+
+  /* atmosphere */
+  --sky: #dfe9ee;
+  --sage: #b9c4a7;
+  --sand: #e7dcc6;
+
+  /* shape */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+
+  /* elevation */
+  --shadow-sm: 0 1px 2px rgba(27, 28, 23, 0.05), 0 8px 24px rgba(27, 28, 23, 0.05);
+  --shadow-md: 0 2px 8px rgba(27, 28, 23, 0.06), 0 20px 48px rgba(27, 28, 23, 0.09);
+  --shadow-lg: 0 30px 90px rgba(27, 28, 23, 0.16);
+
+  /* type — replace locale fallbacks as needed */
+  --font-display: "Instrument Serif", "Songti SC", "STSong", serif;
+  --font-ui: "Manrope", "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  /* layout */
+  --shell: 1240px;
+  --gutter: 40px;
+  --nav-h: 64px;
+  --ease: cubic-bezier(0.22, 0.7, 0.2, 1);
+}
+
+@media (max-width: 1200px) {
+  :root { --gutter: 32px; }
+}
+@media (max-width: 820px) {
+  :root { --gutter: 20px; --nav-h: 58px; }
+}

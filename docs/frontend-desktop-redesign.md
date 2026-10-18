@@ -1,6 +1,6 @@
 # 前端桌面端重写说明 · Stripe × Vestris
 
-> 分支：`feat/desktop-redesign`<br>范围：`frontend/html/hmdp/` 全部页面与静态资源（nginx 配置与部署路径不变）<br>设计规范：[`skills/city-guide-web/`](../skills/city-guide-web/SKILL.md)
+> 分支：`feat/desktop-redesign`<br>范围：`frontend/html/hmdp/` 全部页面与静态资源（nginx 配置与部署路径不变）<br>设计规范：[`skills/warm-product-web/`](../skills/warm-product-web/SKILL.md)
 
 ---
 
@@ -25,13 +25,11 @@
 | [stripe.com](https://stripe.com) | 左侧对齐的大标题、12 栏细线网格、产品预览、能力条、卡片网格、编号步骤、深色收尾 CTA、滚动揭示与悬停微交互 | 紫色/蓝色渐变、渐变丝带插画、SaaS 单页叙事、白色 76px 导航 |
 | [vestris.ai](https://vestris.ai) | 奶油底、橄榄绿、Instrument Serif 斜体标题、悬浮半透明胶囊导航、8–24px 圆角、柔和阴影、产品截图式视觉 | 居中的营销 hero 构图、植物照片拼贴、one-page 结构、原品牌字标 |
 
-参考的实测颜色、导航尺寸、字体与页面配方记录在
-`skills/city-guide-web/references/`：
+参考的实测颜色、导航尺寸与版式规则记录在
+`skills/warm-product-web/references/`：
 
-- `surface-notes.md`：Vestris 的表面与导航测量
-- `layout-patterns.md`：Stripe 的版式模式与转译规则
-- `page-recipes.md`：10 个页面逐节的内容顺序
-- `tokens.css`：设计令牌与自托管字体声明
+- `notes.md`：Stripe 版式与 Vestris 表面的测量和“借/不借”清单
+- `tokens.css`：通用设计令牌（不含项目路径）
 
 ## 3. 视觉方向
 
@@ -174,19 +172,17 @@
 
 ## 10. 设计规范沉淀
 
-`skills/city-guide-web/` 是本轮设计提炼出的可复用技能文件夹：
+`skills/warm-product-web/` 是本轮设计提炼出的**通用**技能文件夹，不绑定本项目：
 
 ```
-skills/city-guide-web/
-├─ SKILL.md                    方向、令牌、导航、组件、页面配方、检查清单
+skills/warm-product-web/
+├─ SKILL.md                    方向、规则、令牌、导航、页面模式、检查清单
 └─ references/
-   ├─ tokens.css               颜色/字体/圆角/阴影/断点变量
-   ├─ surface-notes.md         Vestris 的实测表面与导航记录
-   ├─ layout-patterns.md       Stripe 版式模式与转译规则
-   └─ page-recipes.md          10 个页面的逐节配方
+   ├─ tokens.css               通用颜色/字体/圆角/阴影/断点变量
+   └─ notes.md                 Stripe 版式与 Vestris 表面的实测笔记
 ```
 
-后续新增页面时，先读 `SKILL.md` 与 `page-recipes.md`，复用 `site.css` 的令牌和
+后续新增页面时，先读 `SKILL.md` 与 `notes.md`，复用 `site.css` 的令牌和
 `ui.js` 的组件；不要往页面里硬编码颜色、圆角或阴影。
 
 > 业务与权限的完整说明见 [business-model.md](business-model.md)。
