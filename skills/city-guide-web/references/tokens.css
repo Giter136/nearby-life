@@ -1,0 +1,75 @@
+/* city-guide-web · design tokens */
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../../../frontend/html/hmdp/fonts/instrument-serif-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../../../frontend/html/hmdp/fonts/instrument-serif-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url("../../../frontend/html/hmdp/fonts/manrope-latin.woff2") format("woff2");
+}
+
+:root {
+  /* surface */
+  --cream: #f6f3e9;
+  --cream-deep: #efeadd;
+  --paper: #fbf9f3;
+  --white: #fffdf8;
+
+  /* ink & brand */
+  --ink: #1b1c17;
+  --ink-soft: #3e3f35;
+  --muted: #6d6e60;
+  --olive: #5f6249;
+  --olive-deep: #464936;
+  --olive-soft: #8b8e74;
+  --terracotta: #c46a4a;
+  --line: rgba(27, 28, 23, 0.14);
+  --line-strong: rgba(27, 28, 23, 0.32);
+
+  /* atmosphere */
+  --sky: #dfe9ee;
+  --sage: #b9c4a7;
+  --sand: #e7dcc6;
+
+  /* shape */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+
+  /* shadow */
+  --shadow-sm: 0 1px 2px rgba(27, 28, 23, 0.05), 0 6px 18px rgba(27, 28, 23, 0.04);
+  --shadow-md: 0 2px 6px rgba(27, 28, 23, 0.06), 0 18px 40px rgba(27, 28, 23, 0.08);
+  --shadow-lg: 0 30px 80px rgba(27, 28, 23, 0.14);
+
+  /* type */
+  --font-display: "Instrument Serif", "Songti SC", "STSong", "SimSun", serif;
+  --font-ui: "Manrope", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+
+  /* layout */
+  --shell: 1240px;
+  --gutter: 40px;
+  --nav-h: 64px;
+  --ease: cubic-bezier(0.22, 0.7, 0.2, 1);
+}
+
+@media (max-width: 1200px) {
+  :root { --gutter: 32px; }
+}
+@media (max-width: 820px) {
+  :root { --gutter: 20px; --nav-h: 58px; }
+}

@@ -72,7 +72,7 @@
       return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
     },
 
-    // 券有效期：日期区间与时段分两行，便于票根窄栏排版
+    // 券有效期：日期区间与时段分两行，便于窄栏排版
     voucherWindow: function (begin, end) {
       var b = util.parseDate(begin);
       var e = util.parseDate(end);
@@ -96,7 +96,6 @@
       max = max || 80;
       if (text.length <= max) return text;
       var cut = text.slice(0, max);
-      // 尽量在句读处收尾，避免半句话加省略号
       var lastStop = Math.max(
         cut.lastIndexOf('。'),
         cut.lastIndexOf('！'),
@@ -149,6 +148,11 @@
     clearSession: function () {
       sessionStorage.removeItem(global.TOKEN_KEY || 'token');
       sessionStorage.removeItem('userInfo');
+      try {
+        window.dispatchEvent(new Event('hmdp:session-cleared'));
+      } catch (e) {
+        /* 老浏览器忽略 */
+      }
     },
 
     // 登录页地址，带“登录后回到哪里”
@@ -176,8 +180,7 @@
       return '未填写';
     },
 
-    // 后端 tb_user_info.level 原为 0~9，实体目前映射成 Boolean，
-    // 只能在接口能给出的范围内表达“是否开通”
+    // 后端 tb_user_info.level 原为 0~9，实体目前映射成 Boolean
     memberText: function (level) {
       if (level === true) return '已开通会员';
       if (level === false) return '普通用户';
@@ -198,7 +201,6 @@
   /* =========================================================
    * 轻提示
    * =======================================================*/
-  var toastTimer = 0;
   function notify(message, type) {
     if (message && typeof message === 'object' && message.message) {
       message = message.message;
@@ -224,7 +226,6 @@
     item.appendChild(mark);
     item.appendChild(text);
     host.appendChild(item);
-    // 入场
     requestAnimationFrame(function () {
       item.classList.add('is-in');
     });
@@ -232,14 +233,13 @@
       item.classList.remove('is-in');
       setTimeout(function () {
         if (item.parentNode) item.parentNode.removeChild(item);
-      }, 240);
+      }, 220);
     };
     var timer = setTimeout(hide, 3200);
     item.addEventListener('click', function () {
       clearTimeout(timer);
       hide();
     });
-    toastTimer = timer;
   }
   global.notify = notify;
 
@@ -275,10 +275,7 @@
    * =======================================================*/
   Vue.component('app-icon', {
     props: { name: { type: String, required: true }, size: { type: [Number, String], default: 16 } },
-    template:
-      '<svg class="icon" :width="size" :height="size" aria-hidden="true" focusable="false">' +
-      '<use :href="\'/imgs/icon-sprite.svg#i-\' + name"></use>' +
-      '</svg>'
+    template: `<svg class="icon" :width="size" :height="size" aria-hidden="true" focusable="false"><use :href="'/imgs/icon-sprite.svg#i-' + name"></use></svg>`
   });
 
   /* =========================================================
@@ -299,18 +296,17 @@
         return Math.max(0, Math.min(5, Number(this.value) || 0)).toFixed(1);
       }
     },
-    template:
-      '<span class="rating">' +
-      '<span class="rating__stars" :style="{ \'--star-size\': size + \'px\' }" role="img" :aria-label="\'评分 \' + score">' +
-      '<span class="rating__layer rating__layer--muted" aria-hidden="true">★★★★★</span>' +
-      '<span class="rating__layer rating__layer--lit" :style="{ width: ratio + \'%\' }" aria-hidden="true">★★★★★</span>' +
-      '</span>' +
-      '<span v-if="showScore" class="rating__score mono">{{ score }}</span>' +
-      '</span>'
+    template: `<span class="rating">
+      <span class="rating__stars" :style="{ '--star-size': size + 'px' }" role="img" :aria-label="'评分 ' + score">
+        <span class="rating__layer rating__layer--muted" aria-hidden="true">★★★★★</span>
+        <span class="rating__layer rating__layer--lit" :style="{ width: ratio + '%' }" aria-hidden="true">★★★★★</span>
+      </span>
+      <span v-if="showScore" class="rating__score mono">{{ score }}</span>
+    </span>`
   });
 
   /* =========================================================
-   * 组件：页头
+   * 组件：悬浮导航
    * =======================================================*/
   Vue.component('site-header', {
     props: {
@@ -319,57 +315,75 @@
       back: { type: String, default: '' }
     },
     data: function () {
-      return { date: util.today(), logged: util.loggedIn() };
+      return { scrolled: false, menuOpen: false, logged: util.loggedIn() };
     },
     computed: {
       loginHref: function () {
         return util.loginUrl();
       }
     },
-    template:
-      '<header class="masthead" :class="\'masthead--\' + mode">' +
-      '  <div class="shell masthead__bar">' +
-      '    <a class="brand" href="/" aria-label="黑马点评首页">' +
-      '      <span class="brand__name serif">黑马点评</span>' +
-      '      <span class="brand__stamp serif" aria-hidden="true">杭</span>' +
-      '    </a>' +
-      '    <p class="masthead__line mono" aria-hidden="true">HANGZHOU · CITY LIFE JOURNAL</p>' +
-      '    <div class="masthead__meta">' +
-      '      <span class="mono">{{ date }}</span>' +
-      '      <span class="masthead__city">杭州 · 拱墅</span>' +
-      '    </div>' +
-      '  </div>' +
-      '  <div class="masthead__rule" aria-hidden="true"></div>' +
-      '  <nav v-if="mode === \'full\'" class="nav" aria-label="主导航">' +
-      '    <div class="shell nav__inner">' +
-      '      <ul class="nav__links">' +
-      '        <li><a href="/" :class="{ \'is-active\': active === \'home\' }"><span class="mono">01</span>首页</a></li>' +
-      '        <li><a href="/info.html" :class="{ \'is-active\': active === \'profile\' }"><span class="mono">02</span>我的</a></li>' +
-      '        <li><a href="/blog-edit.html" :class="{ \'is-active\': active === \'write\' }"><span class="mono">03</span>写笔记</a></li>' +
-      '      </ul>' +
-      '      <div class="nav__util">' +
-      '        <a v-if="!logged" class="nav__auth" :href="loginHref">登录</a>' +
-      '        <a v-else class="nav__auth" href="/info.html">个人主页</a>' +
-      '      </div>' +
-      '    </div>' +
-      '  </nav>' +
-      '  <div v-if="mode === \'bare\'" class="subbar">' +
-      '    <div class="shell subbar__inner">' +
-      '      <a class="subbar__back" :href="back || \'/\'" @click="!back && goBack($event)">' +
-      '        <app-icon name="arrow-left" :size="15"></app-icon><span>返回</span>' +
-      '      </a>' +
-      '      <span class="subbar__hint mono">黑马点评 · 城市生活志</span>' +
-      '    </div>' +
-      '  </div>' +
-      '</header>',
+    mounted: function () {
+      this.onScroll();
+      window.addEventListener('scroll', this.onScroll, { passive: true });
+      window.addEventListener('hmdp:session-cleared', this.onSessionCleared);
+    },
+    beforeDestroy: function () {
+      window.removeEventListener('scroll', this.onScroll);
+      window.removeEventListener('hmdp:session-cleared', this.onSessionCleared);
+    },
     methods: {
+      onScroll: function () {
+        this.scrolled = (window.scrollY || window.pageYOffset || 0) > 24;
+      },
+      onSessionCleared: function () {
+        this.logged = false;
+        this.menuOpen = false;
+      },
+      closeMenu: function () {
+        this.menuOpen = false;
+      },
       goBack: function (e) {
         if (window.history.length > 1) {
           e.preventDefault();
           window.history.back();
         }
       }
-    }
+    },
+    template: `<div class="site-top" :class="{ 'is-scrolled': scrolled }">
+      <div class="site-top__inner">
+        <a class="brand" href="/" aria-label="黑马点评首页">
+          <span class="brand__mark"><app-icon name="leaf" :size="26"></app-icon></span>
+          <span class="brand__word">黑马点评</span>
+        </a>
+        <nav v-if="mode === 'full'" class="nav-links" aria-label="主导航">
+          <a href="/" :class="{ 'is-active': active === 'home' }">首页</a>
+          <a href="/shop-list.html?type=1&name=%E7%BE%8E%E9%A3%9F" :class="{ 'is-active': active === 'shops' }">商户</a>
+          <a href="/index.html#hot" :class="{ 'is-active': active === 'hot' }">热门</a>
+          <a href="/info.html" :class="{ 'is-active': active === 'profile' }">我的</a>
+        </nav>
+        <div v-if="mode === 'full'" class="nav-cta">
+          <a v-if="!logged" class="btn btn--secondary btn--sm" :href="loginHref">登录</a>
+          <a v-else class="btn btn--secondary btn--sm" href="/info.html">个人主页</a>
+          <a class="btn btn--primary btn--sm" href="/blog-edit.html">写笔记</a>
+          <button class="nav-burger" type="button" :aria-expanded="menuOpen ? 'true' : 'false'" aria-label="打开菜单" @click="menuOpen = !menuOpen">
+            <app-icon :name="menuOpen ? 'close' : 'menu'" :size="18"></app-icon>
+          </button>
+        </div>
+        <div v-else class="nav-bare">
+          <a class="back-link" :href="back || '/'" @click="!back && goBack($event)">
+            <app-icon name="arrow-left" :size="15"></app-icon>返回
+          </a>
+        </div>
+      </div>
+      <div v-if="mode === 'full' && menuOpen" class="mobile-sheet">
+        <a href="/" @click="closeMenu">首页</a>
+        <a href="/shop-list.html?type=1&name=%E7%BE%8E%E9%A3%9F" @click="closeMenu">商户</a>
+        <a href="/index.html#hot" @click="closeMenu">热门笔记</a>
+        <a href="/info.html" @click="closeMenu">我的主页</a>
+        <a v-if="!logged" class="btn btn--secondary btn--sm" :href="loginHref">登录</a>
+        <a class="btn btn--primary btn--sm" href="/blog-edit.html">写笔记</a>
+      </div>
+    </div>`
   });
 
   /* =========================================================
@@ -384,40 +398,42 @@
         return util.loginUrl();
       }
     },
-    template:
-      '<footer class="footer">' +
-      '  <div class="shell footer__inner">' +
-      '    <div class="footer__brand">' +
-      '      <div class="footer__name serif">黑马点评<span class="footer__stamp serif">杭</span></div>' +
-      '      <p class="footer__slogan">记录街巷里的好去处，<br>把城市生活读成一份日报。</p>' +
-      '      <p class="footer__coord mono">N 30°19′ · E 120°09′</p>' +
-      '    </div>' +
-      '    <nav class="footer__nav" aria-label="页脚导航">' +
-      '      <div class="footer__col">' +
-      '        <p class="footer__label mono">阅读</p>' +
-      '        <a href="/">首页</a>' +
-      '        <a href="/shop-list.html?type=1&name=%E7%BE%8E%E9%A3%9F">美食商户</a>' +
-      '        <a href="/shop-list.html?type=2&name=KTV">娱乐商户</a>' +
-      '      </div>' +
-      '      <div class="footer__col">' +
-      '        <p class="footer__label mono">个人</p>' +
-      '        <a href="/info.html">我的主页</a>' +
-      '        <a href="/blog-edit.html">写笔记</a>' +
-      '        <a :href="loginHref">登录</a>' +
-      '      </div>' +
-      '      <div class="footer__col">' +
-      '        <p class="footer__label mono">关于</p>' +
-      '        <span>黑马点评 · 课程项目</span>' +
-      '        <span>Spring Boot · Redis · Kafka</span>' +
-      '        <span>仅供学习演示</span>' +
-      '      </div>' +
-      '    </nav>' +
-      '  </div>' +
-      '  <div class="shell footer__bottom">' +
-      '    <span class="mono">© {{ year }} hmdp.com</span>' +
-      '    <span class="mono">CITY LIFE JOURNAL / VOL. 01</span>' +
-      '  </div>' +
-      '</footer>'
+    template: `<footer class="site-footer">
+      <div class="shell footer-grid">
+        <div class="footer-brand">
+          <a class="brand brand--footer" href="/">
+            <span class="brand__mark"><app-icon name="leaf" :size="28"></app-icon></span>
+            <span class="brand__word">黑马点评</span>
+          </a>
+          <p class="footer-tagline">杭州的城市生活指南。把探店笔记、商户索引和限时优惠，收进同一份城市读本。</p>
+          <p class="footer-coord mono">N 30°19′ · E 120°09′</p>
+        </div>
+        <div class="footer-col">
+          <h3>浏览</h3>
+          <a href="/">首页</a>
+          <a href="/shop-list.html?type=1&name=%E7%BE%8E%E9%A3%9F">美食商户</a>
+          <a href="/shop-list.html?type=2&name=KTV">娱乐商户</a>
+          <a href="/index.html#hot">热门笔记</a>
+        </div>
+        <div class="footer-col">
+          <h3>账户</h3>
+          <a :href="loginHref">登录</a>
+          <a href="/info.html">我的主页</a>
+          <a href="/blog-edit.html">写笔记</a>
+          <a href="/info-edit.html">资料档案</a>
+        </div>
+        <div class="footer-col">
+          <h3>关于</h3>
+          <span>黑马点评 · 课程项目</span>
+          <span>Spring Boot · Redis · Kafka</span>
+          <span>仅供学习演示</span>
+        </div>
+      </div>
+      <div class="shell footer-bottom">
+        <span>© {{ year }} hmdp.com</span>
+        <span>HANGZHOU CITY GUIDE</span>
+      </div>
+    </footer>`
   });
 
   /* =========================================================
@@ -439,57 +455,58 @@
         return util.firstImage(this.note.images);
       },
       excerpt: function () {
-        return this.variant === 'grid' ? '' : util.excerpt(this.note.content, 74);
+        return this.variant === 'row' ? util.excerpt(this.note.content, 76) : '';
+      },
+      isRow: function () {
+        return this.variant === 'row';
+      },
+      number: function () {
+        return this.index ? String(this.index).padStart(2, '0') : '';
       }
     },
-    template:
-      '<article class="note" :class="\'note--\' + variant" v-reveal="delay">' +
-      '  <a class="note__fig" :href="href" :aria-label="note.title">' +
-      '    <img :src="image" :alt="note.title || \'探店笔记\'" loading="lazy">' +
-      '  </a>' +
-      '  <div class="note__body">' +
-      '    <span class="note__no mono">{{ index ? String(index).padStart(2, \'0\') : \'\' }}</span>' +
-      '    <h3 class="note__title serif"><a :href="href">{{ note.title }}</a></h3>' +
-      '    <p v-if="excerpt" class="note__excerpt">{{ excerpt }}</p>' +
-      '    <div class="note__meta">' +
-      '      <template v-if="showAuthor && note.name">' +
-      '        <img class="avatar avatar--xs" :src="note.icon || \'/imgs/icons/default-icon.png\'" alt="">' +
-      '        <span class="note__author">{{ note.name }}</span>' +
-      '        <span class="meta-dot" aria-hidden="true"></span>' +
-      '      </template>' +
-      '      <button class="note__like" type="button" :class="{ \'is-liked\': note.isLike }" @click.prevent.stop="$emit(\'like\', note)" :aria-label="\'点赞\' + (note.title || \'\')">' +
-      '        <app-icon name="thumb" :size="13"></app-icon><span class="mono">{{ note.liked || 0 }}</span>' +
-      '      </button>' +
-      '      <span v-if="variant !== \'grid\'" class="note__stat"><app-icon name="comment" :size="13"></app-icon><span class="mono">{{ note.comments || 0 }}</span></span>' +
-      '    </div>' +
-      '  </div>' +
-      '</article>'
+    template: `<article :class="isRow ? 'note-row' : 'note-card'" v-reveal="delay">
+      <a :class="isRow ? 'note-row__media' : 'note-card__media'" :href="href" :aria-label="note.title">
+        <img :src="image" :alt="note.title || '探店笔记'" loading="lazy">
+      </a>
+      <div :class="isRow ? 'note-row__body' : 'note-card__body'">
+        <span :class="isRow ? 'note-row__no' : 'note-card__no'">{{ number }}</span>
+        <h3 :class="isRow ? 'note-row__title' : 'note-card__title'"><a :href="href">{{ note.title }}</a></h3>
+        <p v-if="isRow && excerpt" class="note-row__excerpt">{{ excerpt }}</p>
+        <div :class="isRow ? 'note-row__meta' : 'note-card__meta'">
+          <template v-if="showAuthor && note.name">
+            <img class="avatar avatar--xs" :src="note.icon || '/imgs/icons/default-icon.png'" alt="">
+            <span class="note-card__author">{{ note.name }}</span>
+            <span class="meta-dot" aria-hidden="true"></span>
+          </template>
+          <button class="note-card__like" type="button" :class="{ 'is-liked': note.isLike }" @click.prevent.stop="$emit('like', note)" :aria-label="'点赞' + (note.title || '')">
+            <app-icon name="thumb" :size="13"></app-icon><span class="mono">{{ note.liked || 0 }}</span>
+          </button>
+          <span v-if="isRow" class="note-card__stat"><app-icon name="comment" :size="13"></app-icon><span class="mono">{{ note.comments || 0 }}</span></span>
+        </div>
+      </div>
+    </article>`
   });
 
   /* =========================================================
-   * 组件：空状态 / 载入
+   * 组件：空状态 / 登录提示
    * =======================================================*/
   Vue.component('empty-state', {
     props: {
       title: { type: String, default: '这里还没有内容' },
-      hint: { type: String, default: '' }
+      hint: { type: String, default: '' },
+      kicker: { type: String, default: 'CITY GUIDE' }
     },
-    template:
-      '<div class="empty">' +
-      '  <span class="empty__mark mono">○</span>' +
-      '  <p class="empty__title serif">{{ title }}</p>' +
-      '  <p v-if="hint" class="empty__hint">{{ hint }}</p>' +
-      '  <div class="empty__actions"><slot></slot></div>' +
-      '</div>'
+    template: `<div class="gate">
+      <span class="gate__mark"><app-icon name="compass" :size="22"></app-icon></span>
+      <p class="eyebrow">{{ kicker }}</p>
+      <h2 class="gate__title">{{ title }}</h2>
+      <p v-if="hint" class="gate__hint">{{ hint }}</p>
+      <div class="gate__actions"><slot></slot></div>
+    </div>`
   });
 
   Vue.component('loading-rule', {
     props: { text: { type: String, default: '正在读取' } },
-    template:
-      '<div class="loading" role="status">' +
-      '  <span class="loading__line" aria-hidden="true"></span>' +
-      '  <span class="mono">{{ text }}</span>' +
-      '  <span class="loading__line" aria-hidden="true"></span>' +
-      '</div>'
+    template: `<div class="loading" role="status"><span class="loading__ring"></span><span>{{ text }}</span></div>`
   });
 })(window);

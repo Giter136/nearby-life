@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>登录 — 黑马点评 · 城市生活志</title>
+  <title>登录 · 黑马点评</title>
   <meta name="description" content="手机号快捷登录黑马点评。">
   <link rel="icon" href="./favicon.ico">
   <link rel="stylesheet" href="./css/site.css">
@@ -12,86 +12,93 @@
 <div id="app" v-cloak>
   <site-header mode="bare" back="/"></site-header>
 
-  <section class="auth">
-    <aside class="auth__aside">
-      <div class="auth__mark serif">黑马点评<span>杭</span></div>
-      <div>
-        <p class="auth__quote">把城市过成<br><em>一份日报</em>。</p>
-        <p class="auth__sub">登录后，你可以写下探店笔记、关注同城作者，并抢购限时优惠券。手机号未注册时，验证后会自动创建账户。</p>
-      </div>
-      <div class="auth__foot mono">
-        <span>HANGZHOU · CITY LIFE JOURNAL</span>
-        <span>N 30°19′ · E 120°09′</span>
-      </div>
-    </aside>
+  <main class="auth-wrap">
+    <div class="shell">
+      <section class="auth-page">
+        <aside class="auth-brand">
+          <div class="auth-brand__top">
+            <span class="brand__mark" style="color: var(--sage);"><app-icon name="leaf" :size="26"></app-icon></span>
+            <span>黑马点评</span>
+          </div>
+          <div>
+            <p class="auth-brand__quote">把城市生活，<br>读成 <em>a daily read</em>.</p>
+            <p class="auth-brand__sub">登录后，写下探店笔记、关注同城作者，并抢购限时优惠券。手机号未注册时，验证后会自动创建账户。</p>
+          </div>
+          <div class="auth-brand__foot mono">
+            <span>HANGZHOU · CITY GUIDE</span>
+            <span>N 30°19′ · E 120°09′</span>
+          </div>
+        </aside>
 
-    <div class="auth__form-wrap">
-      <div class="auth__panel">
-        <span class="kicker auth__eyebrow">MEMBER · 登录</span>
-        <h1 class="auth__title">手机号快捷登录</h1>
-        <p class="auth__desc">未注册的手机号验证后自动创建账户。</p>
+        <div class="auth-panel">
+          <div class="auth-form">
+            <span class="eyebrow">MEMBER / 登录</span>
+            <h1>手机号快捷登录</h1>
+            <p class="auth-form__desc">未注册的手机号验证后自动创建账户。</p>
 
-        <div class="auth__switch" role="tablist" aria-label="登录方式">
-          <a class="is-active" href="/login.html" role="tab" aria-selected="true">验证码</a>
-          <a href="/login2.html" role="tab" aria-selected="false">密码</a>
-        </div>
+            <div class="auth-switch" role="tablist" aria-label="登录方式">
+              <a class="is-active" href="/login.html" role="tab" aria-selected="true">验证码</a>
+              <a href="/login2.html" role="tab" aria-selected="false">密码</a>
+            </div>
 
-        <form @submit.prevent="login" novalidate>
-          <div class="field">
-            <label class="field__label" for="phone">手机号</label>
-            <div class="field__control">
-              <div class="field__grow">
+            <form @submit.prevent="login" novalidate>
+              <div class="field">
+                <label class="field__label" for="phone">手机号</label>
+                <div class="field__control">
+                  <div class="field__grow">
+                    <input
+                      id="phone"
+                      class="input"
+                      type="tel"
+                      inputmode="numeric"
+                      maxlength="11"
+                      autocomplete="tel"
+                      placeholder="请输入 11 位手机号"
+                      v-model.trim="form.phone"
+                    >
+                  </div>
+                  <button class="btn btn--code" type="button" :disabled="disabled" @click="sendCode">
+                    {{ codeBtnMsg }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="field">
+                <label class="field__label" for="code">验证码</label>
                 <input
-                  id="phone"
+                  id="code"
                   class="input"
-                  type="tel"
+                  type="text"
                   inputmode="numeric"
-                  maxlength="11"
-                  autocomplete="tel"
-                  placeholder="请输入 11 位手机号"
-                  v-model.trim="form.phone"
+                  maxlength="6"
+                  autocomplete="one-time-code"
+                  placeholder="请输入收到的验证码"
+                  v-model.trim="form.code"
                 >
               </div>
-              <button class="btn btn--code" type="button" :disabled="disabled" @click="sendCode">
-                {{ codeBtnMsg }}
-              </button>
+
+              <label class="agree">
+                <input type="checkbox" v-model="radio" value="1">
+                <span>
+                  我已阅读并同意
+                  <span class="agree__doc">《黑马点评用户服务协议》</span>、
+                  <span class="agree__doc">《隐私政策》</span>，
+                  接受免除或者限制责任、诉讼管辖约定等粗体标示条款。
+                </span>
+              </label>
+
+              <button class="btn btn--primary btn--block btn--lg" type="submit">登录</button>
+            </form>
+
+            <div class="auth-alt">
+              <span>演示环境 · 验证码会打印在服务端日志</span>
+              <a href="/login2.html">使用密码登录</a>
             </div>
           </div>
-
-          <div class="field">
-            <label class="field__label" for="code">验证码</label>
-            <input
-              id="code"
-              class="input"
-              type="text"
-              inputmode="numeric"
-              maxlength="6"
-              autocomplete="one-time-code"
-              placeholder="请输入收到的验证码"
-              v-model.trim="form.code"
-            >
-          </div>
-
-          <label class="agree">
-            <input type="checkbox" v-model="radio" value="1">
-            <span>
-              我已阅读并同意
-              <span class="agree__doc">《黑马点评用户服务协议》</span>、
-              <span class="agree__doc">《隐私政策》</span>，
-              接受免除或者限制责任、诉讼管辖约定等粗体标示条款。
-            </span>
-          </label>
-
-          <button class="btn btn--primary btn--block" type="submit">登录</button>
-        </form>
-
-        <div class="auth__alt">
-          <span>演示环境 · 验证码会打印在服务端日志</span>
-          <a href="/login2.html">使用密码登录</a>
         </div>
-      </div>
+      </section>
     </div>
-  </section>
+  </main>
 </div>
 
 <script src="./js/vue.js"></script>
@@ -117,11 +124,9 @@
           notify('手机号和验证码不能为空', 'error');
           return;
         }
-        // 与旧版一致：POST /user/login
         api.login(this.form)
           .then(function (token) {
             if (token) sessionStorage.setItem('token', token);
-            // 从受保护页面跳来登录时，登录后回到原页面
             location.href = util.safeRedirect(util.getUrlParam('redirect'), '/index.html');
           })
           .catch(function (err) { notify(err, 'error'); });
@@ -132,7 +137,6 @@
           notify('手机号不能为空', 'error');
           return;
         }
-        // 与旧版一致：POST /user/code?phone=
         api.sendCode(this.form.phone).catch(function (err) { notify(err, 'error'); });
 
         this.disabled = true;
