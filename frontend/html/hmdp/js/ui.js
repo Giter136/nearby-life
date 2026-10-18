@@ -1,5 +1,5 @@
 /*
- * 黑马点评 · 共享 UI 工具与 Vue 组件
+ * 近邻生活 · 共享 UI 工具与 Vue 组件
  * 依赖：vue.js、api.js
  */
 (function (global) {
@@ -351,9 +351,9 @@
     },
     template: `<div class="site-top" :class="{ 'is-scrolled': scrolled }">
       <div class="site-top__inner">
-        <a class="brand" href="/" aria-label="黑马点评首页">
+        <a class="brand" href="/" aria-label="近邻生活首页">
           <span class="brand__mark"><app-icon name="leaf" :size="26"></app-icon></span>
-          <span class="brand__word">黑马点评</span>
+          <span class="brand__word">近邻生活</span>
         </a>
         <nav v-if="mode === 'full'" class="nav-links" aria-label="主导航">
           <a href="/" :class="{ 'is-active': active === 'home' }">首页</a>
@@ -403,7 +403,7 @@
         <div class="footer-brand">
           <a class="brand brand--footer" href="/">
             <span class="brand__mark"><app-icon name="leaf" :size="28"></app-icon></span>
-            <span class="brand__word">黑马点评</span>
+            <span class="brand__word">近邻生活</span>
           </a>
           <p class="footer-tagline">杭州的城市生活指南。把探店笔记、商户索引和限时优惠，收进同一份城市读本。</p>
           <p class="footer-coord mono">N 30°19′ · E 120°09′</p>
@@ -424,14 +424,14 @@
         </div>
         <div class="footer-col">
           <h3>关于</h3>
-          <span>黑马点评 · 课程项目</span>
+          <span>近邻生活 · 课程项目</span>
           <span>Spring Boot · Redis · Kafka</span>
           <span>仅供学习演示</span>
         </div>
       </div>
       <div class="shell footer-bottom">
-        <span>© {{ year }} hmdp.com</span>
-        <span>HANGZHOU CITY GUIDE</span>
+        <span>© {{ year }} nearby-life</span>
+        <span>NEARBY LIFE · CITY GUIDE</span>
       </div>
     </footer>`
   });
