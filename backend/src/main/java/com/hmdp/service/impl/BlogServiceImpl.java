@@ -131,7 +131,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
 
     @Override
     public Result saveBlog(Blog blog) {
-
+        save(blog);
         UserDTO user = UserHolder.getUser();
         if(user==null){
             return Result.fail("请先登录");
