@@ -1,234 +1,285 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>黑马点评</title>
-  <!-- 引入样式 -->
-  <link rel="stylesheet" href="./css/element.css">
-
-  <link href="./css/shop-detail.css" rel="stylesheet">
-  <link href="./css/main.css" rel="stylesheet">
-
-  <style type="text/css">
-
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>商户详情 · 近邻生活</title>
+  <meta name="description" content="商户详情、营业信息与限时代金券。">
+  <link rel="icon" href="./favicon.ico">
+  <link rel="stylesheet" href="./css/site.css">
 </head>
 <body>
-<div id="app">
-  <div class="header">
-    <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
-    <div class="header-title"></div>
-    <div class="header-share">...</div>
-  </div>
-  <div class="top-bar"></div>
-  <div class="shop-info-box">
-    <div class="shop-title">{{shop.name}}</div>
-    <div class="shop-rate">
-      <el-rate
-          disabled v-model="shop.score/10"
-          text-color="#F63"
-          show-score
-      ></el-rate>
-      <span>{{shop.comments}}条</span>
-    </div>
-    <div class="shop-rate-info"> 口味:4.9  环境:4.8  服务:4.7 </div>
-    <div class="shop-rank">
-      <img src="/imgs/bd.png" width="63" height="20" alt="">
-      <span>拱墅区好评榜第3名</span>
-      <div><i class="el-icon-arrow-right"></i></div>
-    </div>
-    <div class="shop-images">
-      <div v-for="(s,i) in shop.images" :key="i">
-        <img :src="s" alt="">
-      </div>
-    </div>
-    <div class="shop-address">
-      <div><i class="el-icon-map-location"></i></div>
-      <span>{{shop.address}}</span>
-      <div style="width: 10px; flex-grow: 2; text-align: center; color: #e1e2e3">|</div>
-      <div style="margin: 0 5px"><img src="https://p0.meituan.net/travelcube/bf684aa196c870810655e45b1e52ce843484.png@24w_16h_40q" alt=""></div>
-      <div><img src="https://p0.meituan.net/travelcube/9277ace32123e0c9f59dedf4407892221566.png@24w_24h_40q" alt=""></div>
-    </div>
-  </div>
-  <div class="shop-divider"></div>
-  <div class="shop-open-time">
-    <span><i class="el-icon-watch"></i></span>
-    <div>营业时间</div>
-    <div>{{shop.openHours}}</div>
-    <span class="line-right">查看详情 <i class="el-icon-arrow-right"></i></span>
-  </div>
-  <div class="shop-divider"></div>
-  <div class="shop-voucher">
-    <div>
-      <span class="voucher-icon">券</span>
-      <span style="font-weight: bold;">代金券</span>
-    </div>
-    <div class="voucher-box" v-for="v in vouchers" :key="v.id" v-if="!isEnd(v)">
-      <div class="voucher-circle">
-        <div class="voucher-b"></div>
-        <div class="voucher-b"></div>
-        <div class="voucher-b"></div>
-      </div>
-      <div class="voucher-left">
-        <div class="voucher-title">{{v.title}}</div>
-        <div class="voucher-subtitle">{{v.subTitle}}</div>
-        <div class="voucher-price"><div>￥ {{util.formatPrice(v.payValue)}}</div>  <span>{{(v.payValue*10)/v.actualValue}}折</span></div>
-      </div>
-      <div class="voucher-right">
-        <div v-if="v.type" class="seckill-box">
-          <div class="voucher-btn" :class="{'disable-btn': isNotBegin(v) || v.stock < 1}" @click="seckill(v)">限时抢购</div>
-          <div class="seckill-stock">剩余 <span>{{v.stock}}</span> 张</div>
-          <div class="seckill-time">{{formatTime(v)}}</div>
+<div id="app" v-cloak>
+  <site-header active="shops"></site-header>
+
+  <main class="page page--compact">
+    <div class="shell">
+      <nav class="breadcrumb" aria-label="面包屑">
+        <a href="/">首页</a>
+        <span>/</span>
+        <span>商户</span>
+        <span>/</span>
+        <span aria-current="page">{{ shop.name || '详情' }}</span>
+      </nav>
+
+      <loading-rule v-if="loading" text="正在读取商户"></loading-rule>
+
+      <template v-if="!loading && !shop.id">
+        <h1 class="sr-only">商户详情</h1>
+        <empty-state title="没有找到这家商户" hint="它可能已经下线，或者链接已经失效。" kicker="NOT FOUND">
+          <a class="btn btn--sm btn--primary" href="/">回到首页</a>
+        </empty-state>
+      </template>
+
+      <section class="product-hero" v-if="shop.id">
+        <div class="detail-gallery">
+          <div class="gallery">
+            <div class="gallery__main">
+              <img :src="activeImage" :alt="shop.name" @error="imgFallback">
+            </div>
+            <div class="gallery__thumbs" v-if="images.length > 1">
+              <button
+                class="gallery__thumb"
+                type="button"
+                v-for="(img, i) in images"
+                :key="i"
+                :class="{ 'is-active': i === active }"
+                @click="active = i"
+                :aria-label="'查看第 ' + (i + 1) + ' 张图'"
+              >
+                <img :src="img" :alt="shop.name + ' 第' + (i + 1) + '张'" @error="imgFallback">
+              </button>
+            </div>
+          </div>
+          <p class="figcap">
+            <span class="figcap__no mono">FIG.{{ pad(active + 1) }}</span>
+            <span>商户实拍 · {{ shop.area || '商圈未标注' }} / 共 {{ images.length }} 张</span>
+          </p>
         </div>
-        <div class="voucher-btn" v-else>抢购</div>
-      </div>
-    </div>
-  </div>
-  <div class="shop-divider"></div>
-  <div class="shop-comments">
-    <div class="comments-head">
-      <div>网友评价 <span>（119）</span></div>
-      <div><i class="el-icon-arrow-right"></i></div>
-    </div>
-    <div class="comment-tags">
-      <div class="tag">味道赞(19)</div>
-      <div class="tag">牛肉赞(16)</div>
-      <div class="tag">菜品不错(11)</div>
-      <div class="tag">回头客(4)</div>
-      <div class="tag">分量足(4)</div>
-      <div class="tag">停车方便(3)</div>
-      <div class="tag">海鲜棒(3)</div>
-      <div class="tag">饮品赞(3)</div>
-      <div class="tag">朋友聚餐(6)</div>
-    </div>
-    <div class="comment-list">
-      <div class="comment-box" v-for="i in 3" :key="i">
-        <div class="comment-icon">
-          <img src="https://p0.meituan.net/userheadpicbackend/57e44d6eba01aad0d8d711788f30a126549507.jpg%4048w_48h_1e_1c_1l%7Cwatermark%3D0" alt="">
-        </div>
-        <div class="comment-info">
-          <div class="comment-user">叶小乙 <span>Lv5</span></div>
-          <div style="display: flex;">
-            打分
-            <el-rate disabled v-model="4.5" ></el-rate>
+
+        <div class="product-info">
+          <p class="eyebrow">MERCHANT / 商户档案</p>
+          <h1>{{ shop.name }}</h1>
+          <div class="product-info__meta">
+            <star-rating :value="(shop.score || 0) / 10" show-score :size="15"></star-rating>
+            <span class="mono">{{ shop.comments || 0 }} 条评价</span>
+            <span class="meta-dot" aria-hidden="true"></span>
+            <span class="mono">{{ shop.sold || 0 }} 已售</span>
           </div>
-          <div style="padding: 5px 0; font-size: 14px">
-            某平台上买的券，价格可以当工作餐吃，虽然价格便宜，但是这家店一点都没有...
+          <p class="product-info__desc">{{ shop.openHours ? '营业时间 ' + shop.openHours + '。' : '' }}人均约 ¥{{ shop.avgPrice || 0 }}，位于{{ shop.area || '杭州' }}。到店前请以门店现场信息为准。</p>
+
+          <div class="product-info__actions">
+            <a class="btn btn--primary" href="#vouchers">
+              <app-icon name="ticket" :size="15"></app-icon>查看代金券
+            </a>
+            <button class="btn btn--secondary" type="button" @click="goBack">返回上一页</button>
           </div>
-          <div class="comment-images">
-            <img src="https://qcloud.dpfile.com/pc/6T7MfXzx7USPIkSy7jzm40qZSmlHUF2jd-FZUL6WpjE9byagjLlrseWxnl1LcbuSGybIjx5eX6WNgCPvcASYAw.jpg" alt="">
-            <img src="https://qcloud.dpfile.com/pc/sZ5q-zgglv4VXEWU71xCFjnLM_jUHq-ylq0GKivtrz3JksWQ1f7oBWZsxm1DWgcaGybIjx5eX6WNgCPvcASYAw.jpg" alt="">
-            <img src="https://qcloud.dpfile.com/pc/xZy6W4NwuRFchlOi43DVLPFsx7KWWvPqifE1JTe_jreqdsBYA9CFkeSm2ZlF0OVmGybIjx5eX6WNgCPvcASYAw.jpg" alt="">
-            <img src="https://qcloud.dpfile.com/pc/xZy6W4NwuRFchlOi43DVLPFsx7KWWvPqifE1JTe_jreqdsBYA9CFkeSm2ZlF0OVmGybIjx5eX6WNgCPvcASYAw.jpg" alt="">
-          </div>
-          <div>
-            浏览641 &nbsp;&nbsp;&nbsp;&nbsp;评论5
+
+          <div class="info-list">
+            <div class="info-list__row">
+              <span class="info-list__label">地址</span>
+              <span class="info-list__value">{{ shop.address || '暂无地址' }}</span>
+            </div>
+            <div class="info-list__row">
+              <span class="info-list__label">营业</span>
+              <span class="info-list__value">{{ shop.openHours || '以门店公告为准' }}</span>
+            </div>
+            <div class="info-list__row">
+              <span class="info-list__label">坐标</span>
+              <span class="info-list__value mono">N {{ util.coord(shop.y) }} · E {{ util.coord(shop.x) }}</span>
+            </div>
           </div>
         </div>
+      </section>
+
+      <div class="facts-panel" v-if="shop.id">
+        <div class="fact">
+          <p class="fact__label">人均消费</p>
+          <p class="fact__value mono">¥{{ shop.avgPrice || 0 }}</p>
+        </div>
+        <div class="fact">
+          <p class="fact__label">所在区域</p>
+          <p class="fact__value">{{ shop.area || '商圈未标注' }}</p>
+        </div>
+        <div class="fact">
+          <p class="fact__label">营业时间</p>
+          <p class="fact__value">{{ shop.openHours || '以门店公告为准' }}</p>
+        </div>
+        <div class="fact">
+          <p class="fact__label">销量 / 评价</p>
+          <p class="fact__value mono">{{ shop.sold || 0 }} 已售 · {{ shop.comments || 0 }} 条</p>
+        </div>
       </div>
-      <div style="display: flex; justify-content: space-between;padding: 15px 0; border-top: 1px solid #f1f1f1; margin-top: 10px;">
-        <div>查看全部119条评价</div>
-        <div><i class="el-icon-arrow-right"></i></div>
-      </div>
+
+      <section class="voucher-section" id="vouchers" v-if="shop.id">
+        <header class="section-head" style="margin-bottom: 0;">
+          <div class="section-head__copy">
+            <span class="eyebrow">VOUCHERS / 到店核销</span>
+            <h2>代金券</h2>
+            <p>券面价格、库存和有效期都来自商户接口。秒杀券需要登录后抢购。</p>
+          </div>
+          <span class="section-head__aside mono">{{ pad(validVouchers.length) }} 张</span>
+        </header>
+
+        <div class="voucher-grid" v-if="validVouchers.length">
+          <article class="voucher" v-for="v in validVouchers" :key="v.id" v-reveal="40">
+            <div class="voucher__main">
+              <span class="voucher__label">{{ v.type ? '限时秒杀 · SECKILL' : '代金券 · VOUCHER' }}</span>
+              <h3 class="voucher__title">{{ v.title }}</h3>
+              <p class="voucher__sub">{{ v.subTitle }}</p>
+              <div class="voucher__rules">
+                <span v-for="(r, i) in ruleLines(v)" :key="i">{{ r }}</span>
+              </div>
+            </div>
+            <div class="voucher__stub">
+              <p class="voucher__price"><small>¥</small>{{ util.formatPrice(v.payValue) }}</p>
+              <p class="voucher__was" v-if="v.actualValue">原价 ¥{{ util.formatPrice(v.actualValue) }}</p>
+              <span class="voucher__discount" v-if="util.discount(v.payValue, v.actualValue)">{{ util.discount(v.payValue, v.actualValue) }}</span>
+
+              <template v-if="v.type">
+                <button class="btn btn--primary" type="button" :disabled="!canSeckill(v)" @click="seckill(v)">
+                  {{ buttonText(v) }}
+                </button>
+                <p class="voucher__stock">余 <strong class="mono">{{ v.stock }}</strong> 张</p>
+                <p class="voucher__state mono">{{ util.voucherWindow(v.beginTime, v.endTime) }}</p>
+              </template>
+              <template v-else>
+                <p class="voucher__state">到店出示 · 门店核销</p>
+              </template>
+            </div>
+          </article>
+        </div>
+
+        <empty-state v-else-if="ready" title="暂无可用代金券" hint="这家店暂时没有上架优惠。" kicker="NO VOUCHERS"></empty-state>
+
+        <p class="detail-note">券面价格与有效期来自商户接口，下单前请以门店现场规则为准。演示项目，不产生真实交易。</p>
+      </section>
     </div>
-  </div>
-  <div class="shop-divider"></div>
-  <div class="copyright">
-    copyright ©2021 hmdp.com
-  </div>
+  </main>
+
+  <site-footer></site-footer>
 </div>
+
 <script src="./js/vue.js"></script>
 <script src="./js/axios.min.js"></script>
-<!-- 引入组件库 -->
-<script src="./js/element.js"></script>
-<script src="./js/common.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/ui.js"></script>
 <script>
-
-  const app = new Vue({
-    el: "#app",
+  new Vue({
+    el: '#app',
     data: {
-      util,
+      util: util,
+      loading: false,
+      ready: false,
       shop: {},
-      vouchers: []
+      vouchers: [],
+      active: 0
     },
-    created() {
-      // 获取参数
-      let shopId = util.getUrlParam("id");
-      // 查询酒店信息
-      this.queryShopById(shopId);
-      // 查询优惠券信息
-      this.queryVoucher(shopId);
+    computed: {
+      images: function () {
+        return util.imageList(this.shop.images);
+      },
+      activeImage: function () {
+        return this.images[this.active] || '/imgs/placeholder.svg';
+      },
+      distanceText: function () {
+        return util.distance(this.shop.distance);
+      },
+      validVouchers: function () {
+        return (this.vouchers || []).filter(function (v) {
+          return util.isWithin(v.beginTime, v.endTime) !== 'after';
+        });
+      }
+    },
+    created: function () {
+      var id = util.getUrlParam('id');
+      this.queryShopById(id);
+      this.queryVoucher(id);
     },
     methods: {
-      goBack() {
-        history.back();
+      pad: util.pad,
+      goBack: function () {
+        if (window.history.length > 1) window.history.back();
+        else location.href = '/';
       },
-      queryShopById(shopId) {
-        axios.get("/shop/" + shopId)
-        .then(({data}) => {
-          data.images = data.images.split(",")
-          this.shop = data
-        })
-        .catch(this.$message.error)
+      queryShopById: function (shopId) {
+        var vm = this;
+        vm.loading = true;
+        api.shop(shopId)
+          .then(function (data) {
+            vm.shop = data || {};
+            vm.ready = true;
+          })
+          .catch(function (err) { notify(err, 'error'); })
+          .then(function () { vm.loading = false; });
       },
-      queryVoucher(shopId) {
-        axios.get("/voucher/list/" + shopId)
-        .then(({data}) => {
-          this.vouchers = data;
-        })
-        .catch(this.$message.error)
+      queryVoucher: function (shopId) {
+        var vm = this;
+        api.vouchersOfShop(shopId)
+          .then(function (list) {
+            vm.vouchers = list || [];
+            vm.ready = true;
+          })
+          .catch(function (err) { notify(err, 'error'); });
       },
-      formatTime(v){
-        let b = new Date(v.beginTime);
-        let e = new Date(v.endTime);
-        return b.getMonth() + 1 + "月" + b.getDate() + "日 "
-          +  b.getHours() + ":" + this.formatMinutes(b.getMinutes())
-          + " ~ "/*  + e.getMonth() + 1 + "月" + e.getDate() + "日 " */
-          +  e.getHours() + ":" + this.formatMinutes(e.getMinutes());
+      ruleLines: function (v) {
+        return String(v.rules || '')
+          .split(/\\n|\n/)
+          .map(function (s) { return s.trim(); })
+          .filter(Boolean);
       },
-      formatMinutes(m){
-        if(m < 10) m = "0" + m
-        return m;
+      statusOf: function (v) {
+        return util.isWithin(v.beginTime, v.endTime);
       },
-      isNotBegin(v){
-        return new Date(v.beginTime).getTime() > new Date().getTime();
+      canSeckill: function (v) {
+        return this.statusOf(v) === 'during' && Number(v.stock) > 0;
       },
-      isEnd(v){
-        return new Date(v.endTime).getTime() < new Date().getTime();
+      buttonText: function (v) {
+        var status = this.statusOf(v);
+        if (status === 'before') return '即将开始';
+        if (status === 'after') return '已结束';
+        if (Number(v.stock) < 1) return '已抢光';
+        return '立即抢购';
       },
-      seckill(v){
-        if(!token){
-          this.$message.error("请先登录")
-          // 未登录，跳转
-          setTimeout(() => {
-            location.href = "/login.html"
-          }, 200);
+      seckill: function (v) {
+        var vm = this;
+        if (!util.loggedIn()) {
+          notify('请先登录后再抢购', 'error');
+          setTimeout(function () { util.goLogin(); }, 220);
           return;
         }
-        if(this.isNotBegin(v)){
-          this.$message.error("优惠券抢购尚未开始！")
+        if (this.statusOf(v) === 'before') {
+          notify('优惠券抢购尚未开始', 'error');
           return;
         }
-        if(this.isEnd(v)){
-          this.$message.error("优惠券抢购已经结束！")
+        if (this.statusOf(v) === 'after') {
+          notify('优惠券抢购已经结束', 'error');
           return;
         }
-        if(v.stock < 1){
-          this.$message.error("库存不足，请刷新再试试！")
+        if (Number(v.stock) < 1) {
+          notify('库存不足，请刷新再试试', 'error');
           return;
         }
-        let id = v.id;
-        // 秒杀抢购
-        axios.post("/voucher-order/seckill/" + id)
-        .then(({data}) => {
-          // 抢购成功，这里输出订单id，支付功能TODO
-          this.$message.success("抢购成功，订单id：" + data)
-        })
-        .catch(this.$message.error)
+        api.seckill(v.id)
+          .then(function (orderId) {
+            notify('抢购成功，订单号 ' + orderId, 'success');
+            vm.queryVoucher(util.getUrlParam('id'));
+          })
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              notify('登录已过期，请重新登录', 'error');
+              setTimeout(function () { util.goLogin(); }, 260);
+              return;
+            }
+            notify(err, 'error');
+          });
+      },
+      imgFallback: function (e) {
+        e.target.src = '/imgs/placeholder.svg';
       }
     }
-  })
+  });
 </script>
 </body>
 </html>

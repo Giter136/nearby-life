@@ -1,190 +1,366 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="zh-CN">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>黑马点评</title>
-  <!-- 引入样式 -->
-  <link rel="stylesheet" href="./css/element.css">
-  <link href="./css/main.css" rel="stylesheet">
-  <link href="./css/info.css" rel="stylesheet">
-
-  <style type="text/css">
-      .el-tabs--bottom .el-tabs__item.is-bottom:nth-child(2), .el-tabs--bottom .el-tabs__item.is-top:nth-child(2), .el-tabs--top .el-tabs__item.is-bottom:nth-child(2), .el-tabs--top .el-tabs__item.is-top:nth-child(2) {
-          padding-left: 15px;
-      }
-      .el-tabs, .el-tab-pane{
-          height: 100%;
-      }
-      .el-tabs__header{
-          height: 10%;
-      }
-      .el-tabs__content{
-          height: 90%;
-      }
-  </style>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>作者主页 · 近邻生活</title>
+  <meta name="description" content="作者主页：笔记与共同关注。">
+  <link rel="icon" href="./favicon.ico">
+  <link rel="stylesheet" href="./css/site.css">
 </head>
-
 <body>
-<div id="app">
-  <div class="header">
-    <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
-    <div class="header-title">&nbsp;&nbsp;&nbsp;</div>
-  </div>
-  <div class="basic">
-    <div class="basic-icon">
-      <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
-    </div>
-    <div class="basic-info">
-      <div class="name">{{user.nickName}}</div>
-      <span>杭州</span>
-    </div>
-    <div class="logout-btn" @click="follow" style="text-align: center">
-      {{followed ? "取消关注" : "关注"}}
-    </div>
-  </div>
-  <div class="introduce">
-    <span v-if="info.introduce"></span>
-    <span v-else>这个人很懒，什么都没有留下</span>
-  </div>
-  <div class="content">
-    <el-tabs v-model="activeName" @tab-click="handleClick">
-      <el-tab-pane label="笔记" name="1">
-        <div v-for="b in blogs" :key="b.id" class="blog-item">
-          <div class="blog-img"><img :src="b.images.split(',')[0]" alt=""></div>
-          <div class="blog-info">
-            <div class="blog-title" v-html="b.title"></div>
-            <div class="blog-liked"><img src="/imgs/thumbup.png" alt=""> {{b.liked}}</div>
-            <div class="blog-comments"><i class="el-icon-chat-dot-round"></i> {{b.comments}}</div>
+<div id="app" v-cloak>
+  <site-header active="hot"></site-header>
+
+  <main class="page page--compact">
+    <div class="shell">
+      <nav class="breadcrumb" aria-label="面包屑">
+        <a href="/">首页</a>
+        <span>/</span>
+        <span>作者</span>
+        <span>/</span>
+        <span aria-current="page">{{ user.nickName || '作者主页' }}</span>
+      </nav>
+
+      <loading-rule v-if="loading" text="正在打开作者主页"></loading-rule>
+
+      <template v-if="user.id">
+        <header class="profile-hero" v-reveal="0">
+          <div class="profile-avatar">
+            <img :src="user.icon || '/imgs/icons/default-icon.png'" :alt="user.nickName" @error="avatarFallback">
           </div>
+          <div>
+            <p class="eyebrow">{{ isSelf ? 'MY PAGE / 我的主页' : 'AUTHOR / 作者主页' }}</p>
+            <h1 class="profile-name">{{ user.nickName }}</h1>
+            <div class="profile-meta">
+              <span>{{ info.city || '城市未填写' }}</span>
+              <span class="meta-dot" aria-hidden="true"></span>
+              <span class="mono">UID {{ user.id }}</span>
+              <span class="meta-dot" aria-hidden="true"></span>
+              <span>{{ memberText }}</span>
+            </div>
+            <div class="stat-strip">
+              <div class="stat-strip__item"><strong>{{ util.pad(notes.length) }}</strong><span>近期笔记</span></div>
+              <div class="stat-strip__item"><strong>{{ info.fans || 0 }}</strong><span>粉丝</span></div>
+              <div class="stat-strip__item"><strong>{{ info.followee || 0 }}</strong><span>关注</span></div>
+            </div>
+          </div>
+          <div class="profile-actions">
+            <template v-if="isSelf">
+              <a class="btn btn--primary" href="/info.html">我的主页</a>
+              <a class="btn btn--secondary" href="/info-edit.html">资料档案</a>
+            </template>
+            <template v-else>
+              <button class="btn" :class="followed ? 'btn--secondary' : 'btn--primary'" type="button" @click="follow">
+                {{ followed ? '已关注' : '关注作者' }}
+              </button>
+              <a class="btn btn--secondary" href="/">回到首页</a>
+            </template>
+          </div>
+        </header>
+
+        <p class="profile-intro" v-reveal="60">
+          <template v-if="info.introduce">{{ info.introduce }}</template>
+          <span v-else class="profile-intro__empty">这位作者还没有填写个人介绍。</span>
+        </p>
+
+        <div class="profile-layout">
+          <div>
+            <div class="tabs" role="tablist" aria-label="作者主页内容">
+              <button class="tab" type="button" role="tab" :aria-selected="tab === 'notes'" :class="{ 'is-active': tab === 'notes' }" @click="tab = 'notes'">
+                <span class="mono">01</span>作者笔记
+              </button>
+              <button v-if="!isSelf" class="tab" type="button" role="tab" :aria-selected="tab === 'common'" :class="{ 'is-active': tab === 'common' }" @click="switchTab('common')">
+                <span class="mono">02</span>共同关注
+              </button>
+            </div>
+
+            <div class="tab-panel" v-show="tab === 'notes'">
+              <div class="notes-grid notes-grid--two" v-if="notes.length">
+                <note-card
+                  v-for="(b, i) in notes"
+                  :key="b.id"
+                  :note="b"
+                  :show-author="false"
+                  :index="i + 1"
+                  :delay="(i % 2) * 60"
+                  @like="likeNote"
+                ></note-card>
+              </div>
+              <empty-state v-else-if="notesNeedLogin" title="登录后查看作者笔记" hint="这篇主页的笔记需要登录后访问，登录后会回到这里。" kicker="MEMBERS ONLY">
+                <a class="btn btn--primary" :href="loginHref">登录后继续</a>
+              </empty-state>
+              <empty-state v-else-if="!loading" title="还没有发布笔记" hint="作者的第一篇城市记录，可能还在路上。" kicker="NO NOTES"></empty-state>
+            </div>
+
+            <div class="tab-panel" v-show="tab === 'common'">
+              <div v-if="common.length">
+                <div class="follow-row" v-for="u in common" :key="u.id">
+                  <img class="avatar avatar--md" :src="u.icon || '/imgs/icons/default-icon.png'" :alt="u.nickName" @error="avatarFallback">
+                  <div>
+                    <a class="follow-row__name" :href="'/other-info.html?id=' + u.id">{{ u.nickName }}</a>
+                    <p class="follow-row__meta">你们共同关注的人</p>
+                  </div>
+                  <a class="btn btn--secondary btn--sm" :href="'/other-info.html?id=' + u.id">查看</a>
+                </div>
+              </div>
+              <empty-state v-else-if="commonNeedLogin" title="登录后查看共同关注" hint="共同关注需要登录后计算。" kicker="MEMBERS ONLY">
+                <a class="btn btn--primary" :href="loginHref">登录后继续</a>
+              </empty-state>
+              <empty-state v-else-if="commonUnavailable" title="暂时无法查看共同关注" hint="当前后端没有开放共同关注接口。" kicker="UNAVAILABLE"></empty-state>
+              <empty-state v-else-if="!commonLoading" title="还没有共同关注" hint="关注同一位作者后，共同关注会出现在这里。" kicker="NO COMMON"></empty-state>
+              <loading-rule v-if="commonLoading" text="正在查找共同关注"></loading-rule>
+            </div>
+          </div>
+
+          <aside class="profile-aside" aria-label="作者档案">
+            <section class="side-card">
+              <div class="aside-profile">
+                <img :src="user.icon || '/imgs/icons/default-icon.png'" :alt="user.nickName" @error="avatarFallback">
+                <div>
+                  <div class="author-card__name">{{ user.nickName }}</div>
+                  <div class="mono" style="font-size:10px;color:var(--muted);margin-top:3px">UID {{ user.id }}</div>
+                </div>
+              </div>
+              <div class="mini-row"><span>城市</span><span>{{ info.city || '未填写' }}</span></div>
+              <div class="mini-row"><span>性别</span><span>{{ genderText }}</span></div>
+              <div class="mini-row"><span>会员</span><span>{{ memberText }}</span></div>
+              <p class="side-note" style="margin-top:14px;">粉丝与关注数为账户资料中的存量数据，关注操作不会实时改写这两个数字。</p>
+            </section>
+          </aside>
         </div>
-      </el-tab-pane>
-      <el-tab-pane label="共同关注" name="2">
-        <div>你们都关注了：</div>
-        <div class="follow-info" v-for="u in commonFollows" :key="u.id">
-          <div class="follow-info-icon" @click="toOtherInfo(u.id)">
-            <img :src="u.icon || '/imgs/icons/default-icon.png'" alt="">
-          </div>
-          <div class="follow-info-name">
-            <div class="name">{{u.nickName}}</div>
-          </div>
-          <div class="follow-info-btn" @click="toOtherInfo(u.id)">
-              去主页看看
-          </div>
-        </div>
-      </el-tab-pane>
-    </el-tabs>
-  </div>
-  <foot-bar :active-btn="0"></foot-bar>
+      </template>
+
+      <template v-else-if="needLogin && !loading">
+        <h1 class="sr-only">登录后查看作者主页</h1>
+        <empty-state title="登录后查看作者主页" :hint="loginHint" kicker="MEMBERS ONLY">
+          <a class="btn btn--primary" :href="loginHref">登录后继续</a>
+          <a class="btn btn--secondary" href="/">回到首页</a>
+        </empty-state>
+      </template>
+
+      <empty-state v-else-if="!loading" title="没有找到这位作者" hint="链接可能已经失效。" kicker="NOT FOUND">
+        <a class="btn btn--primary" href="/">回到首页</a>
+      </empty-state>
+    </div>
+  </main>
+
+  <site-footer></site-footer>
 </div>
+
 <script src="./js/vue.js"></script>
 <script src="./js/axios.min.js"></script>
-<!-- 引入组件库 -->
-<script src="./js/element.js"></script>
-<script src="./js/common.js"></script>
-<script src="./js/footer.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/ui.js"></script>
 <script>
-  const app = new Vue({
-    el: "#app",
+  new Vue({
+    el: '#app',
     data: {
-      util,
-      user: "",
-      loginUser: {},
-      activeName: "1",
+      util: util,
+      loading: true,
+      needLogin: false,
+      authExpired: false,
+      me: {},
+      user: {},
       info: {},
-      blogs: [],
-      followed: false, // 是否关注了
-      commonFollows: [], // 共同关注
+      notes: [],
+      notesNeedLogin: false,
+      followed: false,
+      tab: 'notes',
+      common: [],
+      commonNeedLogin: false,
+      commonUnavailable: false,
+      commonLoading: false
     },
-    created() {
-      this.queryUser();
-      this.queryLoginUser();
-    },
-    methods: {
-      queryBlogs() {
-        axios.get("/blog/of/user", {
-            params: {id: this.user.id, current: 1}
-          })
-          .then(({data}) => this.blogs = data)
-          .catch(this.$message.error)
+    computed: {
+      isSelf: function () {
+        return !!this.me.id && this.me.id === this.user.id;
       },
-      queryLoginUser() {
-        // 查询用户信息
-        axios.get("/user/me")
-          .then(({data}) => {
-            // 保存用户
-            this.loginUser = data;
-          })
-          .catch(console.log)
+      loginHref: function () {
+        return util.loginUrl();
       },
-      queryUser() {
-        // 查询用户信息
-        let id = util.getUrlParam("id")
-        axios.get("/user/" + id)
-          .then(({data}) => {
-            // 保存用户
-            this.user = data;
-            // 查询用户详情
-            this.queryUserInfo();
-            // 查询用户笔记
-            this.queryBlogs();
-            // 是否被关注
-            this.isFollowed();
-          })
-          .catch(console.log)
+      loginHint: function () {
+        return this.authExpired
+          ? '登录状态已失效，重新登录后会回到这位作者的主页。'
+          : '作者主页需要登录后查看，登录后会回到这里。';
       },
-      goBack() {
-        history.back();
+      genderText: function () {
+        return util.genderText(this.info.gender);
       },
-      queryUserInfo(id) {
-        axios.get("/user/info/" + this.user.id)
-          .then(({data}) => {
-            if (!data) {
-              return
-            }
-            // 保存用户详情
-            this.info = data;
-            // 保存到本地
-            sessionStorage.setItem("userInfo", JSON.stringify(data))
-          })
-          .catch(err => {
-            this.$message.error(err);
-          })
-      },
-      isFollowed(){
-        axios.get("/follow/or/not/" + this.user.id)
-          .then(({data}) => this.followed = data)
-          .catch(this.$message.error)
-      },
-      queryCommonFollow() {
-        axios.get("/follow/common/" + this.user.id)
-          .then(({data}) => this.commonFollows = data)
-          .catch(err => {
-            this.$message.error(err);
-          })
-      },
-      follow() {
-        axios.put("/follow/" + this.user.id + "/" + !this.followed)
-          .then(() => {
-            this.$message.success(this.followed ? "已取消关注" : "已关注")
-            this.followed = !this.followed
-          })
-          .catch(this.$message.error)
-      },
-      handleClick(t) {
-        if (t.name === '2') {
-          this.queryCommonFollow();
-        }
-      },
-      toOtherInfo(id){
-        location.href = "/other-info.html?id=" + id
+      memberText: function () {
+        return util.memberText(this.info.level);
       }
     },
-
-  })
+    created: function () {
+      var id = util.getUrlParam('id');
+      this.queryMe();
+      this.queryUser(id);
+    },
+    methods: {
+      queryMe: function () {
+        var vm = this;
+        if (!util.loggedIn()) return;
+        api.me()
+          .then(function (data) {
+            vm.me = data || {};
+            if (vm.user.id && vm.me.id && vm.me.id !== vm.user.id) vm.tryFollowed();
+          })
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              vm.me = {};
+            }
+          });
+      },
+      queryUser: function (id) {
+        var vm = this;
+        api.user(id)
+          .then(function (data) {
+            vm.user = data || {};
+            vm.loading = false;
+            if (!vm.user.id) return;
+            vm.queryUserInfo(id);
+            vm.queryUserBlogs(id);
+            if (util.loggedIn() && vm.me.id && vm.me.id !== vm.user.id) {
+              vm.tryFollowed();
+            }
+          })
+          .catch(function (err) {
+            vm.loading = false;
+            if (err && err.auth) {
+              vm.authExpired = util.loggedIn();
+              util.clearSession();
+              vm.needLogin = true;
+              return;
+            }
+            notify(err, 'error');
+          });
+      },
+      queryUserInfo: function (id) {
+        var vm = this;
+        api.userInfo(id)
+          .then(function (data) {
+            if (!data) return;
+            vm.info = data;
+            if (!vm.user.icon && data.icon) vm.user.icon = data.icon;
+          })
+          .catch(function (err) {
+            if (err && err.auth) return;
+            notify(err, 'error');
+          });
+      },
+      queryUserBlogs: function (id) {
+        var vm = this;
+        api.userBlogs(id, 1)
+          .then(function (list) {
+            vm.notes = (list || []).map(function (b) {
+              b.name = vm.user.nickName;
+              b.icon = vm.user.icon;
+              return b;
+            });
+          })
+          .catch(function (err) {
+            if (err && err.auth) {
+              vm.notesNeedLogin = true;
+              return;
+            }
+            notify(err, 'error');
+          });
+      },
+      tryFollowed: function () {
+        var vm = this;
+        if (!util.loggedIn()) return;
+        if (!vm.user.id) return;
+        if (!vm.me.id) return;
+        if (vm.isSelf) return;
+        api.isFollow(vm.user.id)
+          .then(function (flag) { vm.followed = !!flag; })
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              return;
+            }
+            notify(err, 'error');
+          });
+      },
+      follow: function () {
+        var vm = this;
+        if (vm.isSelf) return;
+        if (!util.loggedIn()) {
+          notify('请先登录', 'error');
+          setTimeout(function () { util.goLogin(); }, 220);
+          return;
+        }
+        api.follow(vm.user.id, !vm.followed)
+          .then(function () {
+            notify(vm.followed ? '已取消关注' : '已关注', 'success');
+            vm.followed = !vm.followed;
+          })
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              notify('登录已过期，请重新登录', 'error');
+              setTimeout(function () { util.goLogin(); }, 260);
+              return;
+            }
+            notify(err, 'error');
+          });
+      },
+      switchTab: function (tab) {
+        this.tab = tab;
+        if (tab === 'common' && !this.common.length && !this.commonUnavailable) this.queryCommon();
+      },
+      queryCommon: function () {
+        var vm = this;
+        if (!util.loggedIn()) {
+          vm.commonNeedLogin = true;
+          return;
+        }
+        if (vm.isSelf) return;
+        vm.commonLoading = true;
+        api.commonFollow(vm.user.id)
+          .then(function (list) { vm.common = list || []; })
+          .catch(function (err) {
+            if (err && err.auth) {
+              vm.commonNeedLogin = true;
+              util.clearSession();
+              return;
+            }
+            if (err && err.status === 404) {
+              vm.commonUnavailable = true;
+              return;
+            }
+            notify(err, 'error');
+          })
+          .then(function () { vm.commonLoading = false; });
+      },
+      likeNote: function (note) {
+        if (!util.loggedIn()) {
+          notify('请先登录后再点赞', 'error');
+          setTimeout(function () { util.goLogin(); }, 220);
+          return;
+        }
+        api.likeBlog(note.id)
+          .then(function () { return api.blog(note.id); })
+          .then(function (fresh) {
+            note.liked = fresh.liked;
+            note.isLike = fresh.isLike;
+          })
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              notify('登录已过期，请重新登录', 'error');
+              setTimeout(function () { util.goLogin(); }, 260);
+              return;
+            }
+            notify(err, 'error');
+          });
+      },
+      avatarFallback: function (e) {
+        e.target.src = '/imgs/icons/default-icon.png';
+      }
+    }
+  });
 </script>
 </body>
-
 </html>

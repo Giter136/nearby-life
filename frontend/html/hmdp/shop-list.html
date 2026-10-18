@@ -1,164 +1,333 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>黑马点评</title>
-  <!-- 引入样式 -->
-  <link rel="stylesheet" href="./css/element.css">
-
-  <link href="./css/shop-list.css" rel="stylesheet">
-  <link href="./css/main.css" rel="stylesheet">
-
-  <style type="text/css">
-
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>商户索引 · 近邻生活</title>
+  <meta name="description" content="按类别浏览杭州商户：距离、评分与营业信息。">
+  <link rel="icon" href="./favicon.ico">
+  <link rel="stylesheet" href="./css/site.css">
 </head>
 <body>
-<div id="app">
-  <div class="header">
-    <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
-    <div class="header-title">{{typeName}}</div>
-    <div class="header-search">
-      <i class="el-icon-search"></i>
-    </div>
-  </div>
-  <div class="sort-bar">
-    <div class="sort-item">
-      <el-dropdown trigger="click" @command="handleCommand">
-      <span class="el-dropdown-link">
-        {{typeName}}<i class="el-icon-arrow-down el-icon--right"></i>
-      </span>
-        <el-dropdown-menu slot="dropdown">
-          <el-dropdown-item v-for="t in types" :key="t.id" :command="t">
-            {{t.name}}
-          </el-dropdown-item>
-        </el-dropdown-menu>
-      </el-dropdown>
-    </div>
-    <div class="sort-item" @click="sortAndQuery('')">
-      距离 <i class="el-icon-arrow-down el-icon--right"></i>
-    </div>
-    <div class="sort-item" @click="sortAndQuery('comments')">
-      人气 <i class="el-icon-arrow-down el-icon--right"></i>
-    </div>
-    <div class="sort-item" @click="sortAndQuery('score')">
-      评分 <i class="el-icon-arrow-down el-icon--right"></i>
-    </div>
-  </div>
-  <div class="shop-list" @scroll="onScroll">
-    <div class="shop-box" v-for="s in shops" :key="s.id" @click="toDetail(s.id)">
-      <div class="shop-img"><img :src="s.images" alt=""></div>
-      <div class="shop-info">
-        <div class="shop-title shop-item">{{s.name}}</div>
-        <div class="shop-rate shop-item" >
-          <el-rate
-              disabled v-model="s.score/10"
-              text-color="#F63"
-              show-score
-          ></el-rate>
-          <span>{{s.comments}}条</span>
+<div id="app" v-cloak>
+  <site-header active="shops"></site-header>
+
+  <main class="page page--compact">
+    <div class="shell">
+      <nav class="breadcrumb" aria-label="面包屑">
+        <a href="/">首页</a>
+        <span>/</span>
+        <span>商户索引</span>
+        <span>/</span>
+        <span aria-current="page">{{ typeName || '全部' }}</span>
+      </nav>
+
+      <header class="list-hero">
+        <p class="eyebrow list-hero__eyebrow">MERCHANTS / 分类索引</p>
+        <h1>{{ typeName || '商户' }}</h1>
+        <div class="list-hero__meta">
+          <span class="pill pill--olive">{{ shops.length }} 家已加载</span>
+          <span>杭州 · 拱墅</span>
+          <span class="mono">第 {{ pad(params.current) }} 页</span>
+          <span v-if="sortedShops.length" class="mono">按{{ sortName }}排序</span>
         </div>
-        <div class="shop-area shop-item">
-          <span>{{s.area}}</span>
-          <span v-if="s.distance">{{s.distance < 1000 ? s.distance.toFixed(1) + 'm' : (s.distance/1000).toFixed(1) + 'km'}}</span>
+
+        <div class="list-controls">
+          <div class="list-controls__left">
+            <div class="type-picker">
+              <button class="type-picker__btn" type="button" :aria-expanded="pickerOpen ? 'true' : 'false'" aria-haspopup="true" @click="togglePicker">
+                <app-icon name="map" :size="14"></app-icon>
+                <span>{{ typeBtnLabel }}</span>
+                <app-icon name="chevron-down" :size="13"></app-icon>
+              </button>
+              <div class="type-picker__menu" v-show="pickerOpen && types.length" role="menu">
+                <button
+                  v-for="(t, i) in types"
+                  :key="t.id"
+                  type="button"
+                  role="menuitem"
+                  :class="{ 'is-active': String(t.id) === String(params.typeId) }"
+                  @click="switchType(t)"
+                >
+                  <span>{{ t.name }}</span><span class="mono">{{ pad(i + 1) }}</span>
+                </button>
+              </div>
+            </div>
+            <div class="segmented" role="tablist" aria-label="排序方式">
+              <button type="button" role="tab" :aria-selected="params.sortBy === ''" :class="{ 'is-active': params.sortBy === '' }" @click="sortAndQuery('')">距离</button>
+              <button type="button" role="tab" :aria-selected="params.sortBy === 'comments'" :class="{ 'is-active': params.sortBy === 'comments' }" @click="sortAndQuery('comments')">人气</button>
+              <button type="button" role="tab" :aria-selected="params.sortBy === 'score'" :class="{ 'is-active': params.sortBy === 'score' }" @click="sortAndQuery('score')">评分</button>
+            </div>
+          </div>
+          <span class="list-controls__hint mono">{{ sortHint }}</span>
         </div>
-        <div class="shop-avg shop-item">￥{{s.avgPrice}}/人</div>
-        <div class="shop-address shop-item">
-          <i class="el-icon-map-location"></i>
-          <span>{{s.address}}</span>
+      </header>
+
+      <div class="collection-layout">
+        <div>
+          <loading-rule v-if="loading && !shops.length" text="正在翻阅商户"></loading-rule>
+
+          <div class="shop-grid" v-if="sortedShops.length">
+            <article class="shop-card" v-for="(s, i) in sortedShops" :key="s.id" v-reveal="(i % 4) * 60">
+              <a class="shop-card__media" :href="detailUrl(s)" :aria-label="s.name">
+                <img :src="firstImage(s.images)" :alt="s.name" loading="lazy" @error="imgFallback">
+              </a>
+              <div class="shop-card__body">
+                <div class="shop-card__top">
+                  <h2 class="shop-card__name"><a :href="detailUrl(s)">{{ s.name }}</a></h2>
+                  <div class="shop-card__price mono">¥{{ s.avgPrice || 0 }}<small> /人</small></div>
+                </div>
+                <div class="shop-card__meta">
+                  <star-rating :value="(s.score || 0) / 10" show-score :size="13"></star-rating>
+                  <span class="mono">{{ s.comments || 0 }} 条评价</span>
+                  <span class="mono">{{ s.sold || 0 }} 已售</span>
+                </div>
+                <p class="shop-card__address">
+                  <app-icon name="pin" :size="13"></app-icon>
+                  <span>{{ s.address }}</span>
+                </p>
+                <div class="shop-card__tags">
+                  <span class="tag" v-if="s.area">{{ s.area }}</span>
+                  <span class="tag tag--accent" v-if="distanceText(s.distance)">距你 {{ distanceText(s.distance) }}</span>
+                  <span class="tag" v-if="s.openHours"><app-icon name="clock" :size="11"></app-icon>{{ s.openHours }}</span>
+                </div>
+                <div class="shop-card__foot">
+                  <span>编号 {{ pad(i + 1) }} · 杭州</span>
+                  <a class="shop-card__go" :href="detailUrl(s)">查看商户 <app-icon name="arrow-up-right" :size="13"></app-icon></a>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <empty-state v-if="!loading && ready && !shops.length" title="这一类还没有商户" hint="换一个类别，或者稍后再来看看。" kicker="NO MERCHANTS">
+            <button class="btn btn--sm btn--primary" type="button" @click="togglePicker">换一类</button>
+          </empty-state>
+
+          <loading-rule v-if="loading && shops.length" text="正在读取下一页"></loading-rule>
+
+          <div class="feed-foot" v-if="hasMore && !loading && shops.length">
+            <button class="btn btn--secondary" type="button" @click="loadMore">
+              继续翻阅 <span class="mono">/ {{ pad(params.current + 1) }}</span>
+            </button>
+          </div>
+          <p class="feed-end" v-else-if="ready && shops.length">这一类已翻阅完 · 已加载 {{ shops.length }} 家</p>
         </div>
+
+        <aside class="sticky-side" aria-label="本页人气与分类">
+          <section class="side-card">
+            <div class="side-card__head"><h2>本页人气</h2><span class="mono">RANK</span></div>
+            <ol>
+              <li class="rank-item" v-for="(s, i) in popular" :key="s.id">
+                <span class="rank-item__no">{{ pad(i + 1) }}</span>
+                <div>
+                  <h3 class="rank-item__title"><a :href="detailUrl(s)">{{ s.name }}</a></h3>
+                  <p class="rank-item__meta"><span class="mono">{{ s.comments }}</span> 条评价 · {{ s.area || '商圈未标注' }}</p>
+                </div>
+              </li>
+            </ol>
+            <p v-if="!popular.length" class="side-note">正在统计本页人气。</p>
+          </section>
+
+          <section class="side-card">
+            <div class="side-card__head"><h2>换一类</h2><span class="mono">INDEX</span></div>
+            <template v-if="types.length">
+              <a
+                class="mini-type"
+                v-for="t in types"
+                :key="t.id"
+                :href="'/shop-list.html?type=' + t.id + '&name=' + encodeURIComponent(t.name)"
+                :class="{ 'is-active': String(t.id) === String(params.typeId) }"
+              >
+                <span>{{ t.name }}</span>
+                <span class="mono" v-if="String(t.id) === String(params.typeId)">当前</span>
+                <span class="mono" v-else>→</span>
+              </a>
+            </template>
+            <p v-else-if="!logged || typesForbidden" class="side-note">
+              切换类别需要登录。
+              <a class="link-arrow" :href="loginUrl()" style="margin-top:8px; display:flex;">去登录 <app-icon name="arrow-right" :size="12"></app-icon></a>
+            </p>
+            <p v-else class="side-note">分类加载失败，请刷新重试。</p>
+          </section>
+        </aside>
       </div>
     </div>
-  </div>
+  </main>
+
+  <site-footer></site-footer>
 </div>
+
 <script src="./js/vue.js"></script>
 <script src="./js/axios.min.js"></script>
-<!-- 引入组件库 -->
-<script src="./js/element.js"></script>
-<script src="./js/common.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/ui.js"></script>
 <script>
-
-  const app = new Vue({
-    el: "#app",
+  new Vue({
+    el: '#app',
     data: {
-      util,
-      isReachBottom: false,
-      types: [], // 类型列表
-      shops: [], // 商店列表
-      typeName: "",
-      params:{
+      util: util,
+      pickerOpen: false,
+      loading: false,
+      ready: false,
+      hasMore: true,
+      types: [],
+      typesLoading: false,
+      typesForbidden: false,
+      shops: [],
+      typeName: '',
+      params: {
         typeId: 0,
         current: 1,
-        sortBy: "",
-        x: 120.149993, // 经度
-        y: 30.334229 // 纬度
+        sortBy: '',
+        x: 120.149993,
+        y: 30.334229
       }
     },
-    created() {
-      // 获取参数
-      this.params.typeId = util.getUrlParam("type");
-      this.typeName = util.getUrlParam("name");
-      // 查询类型
-      this.queryTypes();
-      // 查询商店
+    computed: {
+      logged: function () {
+        return util.loggedIn();
+      },
+      sortName: function () {
+        if (this.params.sortBy === 'comments') return '人气';
+        if (this.params.sortBy === 'score') return '评分';
+        return '距离';
+      },
+      typeBtnLabel: function () {
+        if (this.types.length) return this.typeName || '选择类别';
+        if (!this.logged || this.typesForbidden) return '登录后切换类别';
+        if (this.typesLoading) return '正在读取类别';
+        return '类别加载失败';
+      },
+      sortHint: function () {
+        if (this.params.sortBy === 'comments') return '人气 · 仅对已加载商户排序';
+        if (this.params.sortBy === 'score') return '评分 · 仅对已加载商户排序';
+        return '按距离 · N ' + util.coord(this.params.y) + ' · E ' + util.coord(this.params.x);
+      },
+      sortedShops: function () {
+        var list = this.shops.slice();
+        if (this.params.sortBy === 'comments') {
+          list.sort(function (a, b) { return (b.comments || 0) - (a.comments || 0); });
+        } else if (this.params.sortBy === 'score') {
+          list.sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
+        } else {
+          list.sort(function (a, b) {
+            if (a.distance === undefined || a.distance === null) return 1;
+            if (b.distance === undefined || b.distance === null) return -1;
+            return a.distance - b.distance;
+          });
+        }
+        return list;
+      },
+      popular: function () {
+        return this.shops
+          .slice()
+          .sort(function (a, b) { return (b.comments || 0) - (a.comments || 0); })
+          .slice(0, 5);
+      }
+    },
+    created: function () {
+      this.params.typeId = util.getUrlParam('type') || 0;
+      this.typeName = util.getUrlParam('name');
+      if (util.loggedIn()) this.queryTypes();
       this.queryShops();
     },
+    mounted: function () {
+      document.addEventListener('click', this.onDocClick);
+    },
+    beforeDestroy: function () {
+      document.removeEventListener('click', this.onDocClick);
+    },
     methods: {
-      queryTypes() {
-        axios.get("/shop-type/list")
-          .then(({data}) => {
-            this.types = data;
-          })
-          .catch(err => {
-            console.log(err);
-            this.$message.error(err)
-          })
+      pad: util.pad,
+      loginUrl: function () {
+        return util.loginUrl();
       },
-      queryShops() {
-        axios.get("/shop/of/type", {
-            params: this.params
-          })
-          .then(({data}) => {
-            if (!data) {
-              return
-            }
-            data.forEach(s => s.images = s.images.split(',')[0]);
-            this.shops = this.shops.concat(data);
-          })
-          .catch(err => {
-            console.log(err);
-            this.$message.error(err)
-          })
+      togglePicker: function () {
+        if (this.types.length) {
+          this.pickerOpen = !this.pickerOpen;
+          return;
+        }
+        if (!util.loggedIn()) {
+          util.goLogin();
+          return;
+        }
+        if (this.typesForbidden) {
+          util.goLogin();
+          return;
+        }
+        if (this.typesLoading) return;
+        notify('分类加载失败，请刷新重试', 'error');
       },
-      handleCommand(t) {
-        location.href = "/shop-list.html?type="+t.id+"&name="+t.name;
-      },
-      sortAndQuery(sortBy) {
-        this.params.sortBy = sortBy;
-        this.queryShops();
-      },
-      goBack() {
-        history.back();
-      },
-      toDetail(id) {
-        location.href = "/shop-detail.html?id="+id
-      },
-      onScroll(e) {
-        let scrollTop = e.target.scrollTop;
-        let offsetHeight = e.target.offsetHeight;
-        let scrollHeight = e.target.scrollHeight;
-        if(scrollTop + offsetHeight + 1 > scrollHeight && !this.isReachBottom){
-          this.isReachBottom = true
-          console.log("触底")
-          this.params.current++
-          this.queryShops(this.params.current, 5);
-        }else{
-          this.isReachBottom = false
+      onDocClick: function (e) {
+        if (this.pickerOpen && !this.$el.querySelector('.type-picker').contains(e.target)) {
+          this.pickerOpen = false;
         }
       },
+      detailUrl: function (s) {
+        return '/shop-detail.html?id=' + s.id;
+      },
+      firstImage: function (images) {
+        return util.firstImage(images);
+      },
+      distanceText: function (d) {
+        return util.distance(d);
+      },
+      queryTypes: function () {
+        var vm = this;
+        vm.typesLoading = true;
+        api.shopTypes()
+          .then(function (list) { vm.types = list || []; })
+          .catch(function (err) {
+            if (err && err.auth) {
+              util.clearSession();
+              vm.typesForbidden = true;
+              return;
+            }
+            notify(err, 'error');
+          })
+          .then(function () { vm.typesLoading = false; });
+      },
+      queryShops: function () {
+        var vm = this;
+        if (vm.loading) return;
+        vm.loading = true;
+        api.shopsByType(vm.params)
+          .then(function (list) {
+            list = list || [];
+            var seen = {};
+            vm.shops.forEach(function (s) { seen[s.id] = true; });
+            var fresh = list.filter(function (s) { return !seen[s.id]; });
+            vm.shops = vm.shops.concat(fresh);
+            vm.hasMore = list.length > 0;
+            vm.ready = true;
+          })
+          .catch(function (err) {
+            notify(err, 'error');
+            vm.ready = true;
+          })
+          .then(function () { vm.loading = false; });
+      },
+      loadMore: function () {
+        if (this.loading || !this.hasMore) return;
+        this.params.current += 1;
+        this.queryShops();
+      },
+      switchType: function (t) {
+        location.href = '/shop-list.html?type=' + t.id + '&name=' + encodeURIComponent(t.name);
+      },
+      sortAndQuery: function (sortBy) {
+        if (this.params.sortBy === sortBy) return;
+        this.params.sortBy = sortBy;
+        this.params.current = 1;
+        this.shops = [];
+        this.hasMore = true;
+        this.queryShops();
+      },
+      imgFallback: function (e) {
+        e.target.src = '/imgs/placeholder.svg';
+      }
     }
-  })
+  });
 </script>
 </body>
 </html>

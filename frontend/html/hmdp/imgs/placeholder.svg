@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#e8e0d2"/>
+  <path d="M0 1h800M0 599h800M1 0v600M799 0v600" stroke="#17130e" stroke-opacity=".25" stroke-width="1"/>
+  <g fill="none" stroke="#17130e" stroke-opacity=".18" stroke-width="1">
+    <path d="M80 80h640v440H80z"/>
+    <path d="M80 300h640M400 80v440"/>
+  </g>
+  <text x="400" y="310" text-anchor="middle" font-family="Songti SC, SimSun, serif" font-size="30" fill="#6e6355" letter-spacing="8">暂无图片</text>
+  <text x="400" y="345" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#6e6355" letter-spacing="4">NO IMAGE</text>
+</svg>

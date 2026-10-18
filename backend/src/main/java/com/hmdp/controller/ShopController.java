@@ -76,7 +76,7 @@ public class ShopController {
             @RequestParam(value="y",required = false) Double y
     ) {
         // 根据类型分页查询
-        return shopService.queryShopByName(typeId,current,x,y);
+        return shopService.queryShopByType(typeId,current,x,y);
     }
 
     /**
