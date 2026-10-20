@@ -1,0 +1,19 @@
+<!--
+  构建期 Maven 镜像配置（仅用于 Docker 镜像构建，不影响本机开发）
+
+  国内/腾讯云机器直连 Maven Central 延迟很高，依赖下载会拖到十几分钟。
+  这里把 central 指向腾讯云镜像；在海外机器上如仍想用官方源，删掉这个文件
+  以及 Dockerfile 里的 COPY 即可。
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <mirrors>
+    <mirror>
+      <id>tencent-cloud</id>
+      <name>Tencent Cloud Maven Mirror</name>
+      <url>https://mirrors.cloud.tencent.com/nexus/repository/maven-public/</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+  </mirrors>
+</settings>

@@ -110,16 +110,73 @@ nearby-life/
         java/com/hmdp/       controller / service / mapper / config / utils
         resources/           application.yaml、MyBatis XML、Lua 脚本、建表 SQL
  frontend/                    nginx 运行环境 + 页面代码
-    conf/nginx.conf          静态资源 + /api 反向代理
+    Dockerfile               前端镜像（nginx + 静态页面）
+    conf/nginx.conf          静态资源 + /api 反向代理（本机 nginx）
     html/hmdp/               页面（html / css / js / imgs）
+ deploy/nginx/default.conf    容器内 nginx 配置（反代 backend:8081）
+ deploy/maven/settings.xml    构建期 Maven 镜像配置（国内构建加速）
+ deploy/release.ps1           本机构建并推送镜像到仓库
+ deploy/deploy.sh             服务器拉取镜像并重启
  docs/api/                    接口文档（Markdown，5 篇）
  others/                      素材与数据库脚本
+ Dockerfile                   后端镜像（Maven 构建 -> JRE 运行）
+ docker-compose.yml           一键启动 MySQL / Redis / Kafka / 后端 / nginx
+ .env.example                 部署环境变量模板
  README.md
 ```
 
 ---
 
 ## 快速开始
+
+### 方式一：Docker Compose（推荐）
+
+一条命令拉起 MySQL、Redis、Kafka、后端与 nginx：
+
+```bash
+cp .env.example .env      # 先改掉里面的两个密码
+docker compose up -d --build
+```
+
+首次启动会自动建库并导入 `backend/src/main/resources/db/hmdp.sql`；
+访问 http://localhost （80 端口），`/api` 由 nginx 反代到后端容器。
+
+常用命令：
+
+```bash
+docker compose ps                  # 查看状态
+docker compose logs -f backend     # 后端日志
+docker compose down                # 停止（保留数据卷）
+docker compose down -v             # 连数据一起清空，下次启动重新导入种子数据
+```
+
+小内存机器（2G 左右）已把 MySQL 缓冲池、Kafka 堆、JVM 堆分别压到 64M / 256M / 256M；
+如果再吃紧，可以去掉 `kafka` 服务并停用秒杀链路，其余功能不受影响。
+
+### 方式二：镜像仓库发布（TCR）
+
+服务器上不需要源码、JDK、Maven，只负责拉取和运行。
+
+一次性准备：开通 [TCR 个人版](https://console.cloud.tencent.com/tcr)，设置命名空间与仓库密码，
+并创建两个镜像仓库 `hmdp-backend`、`hmdp-web`。
+
+```powershell
+# 本机：登录（用户名是腾讯云账号 ID，密码是 TCR 个人版的仓库密码）
+docker login ccr.ccs.tencentyun.com --username=1000xxxxxxx
+
+# 构建并推送，带版本号方便回滚
+.\deploy\release.ps1 -Registry ccr.ccs.tencentyun.com/<命名空间> -Tag v1.0.0
+```
+
+```bash
+# 服务器：把 .env 里的 IMAGE_REGISTRY / TAG 改成刚推的版本，然后
+cd /opt/hmdp-compose
+./deploy/deploy.sh
+```
+
+回滚就是把 `TAG` 改回上一个版本，再执行一次 `deploy.sh`——秒级，且不用重新构建。
+
+### 方式三：本地手动启动
 
 **前置**：JDK 8+、Maven、MySQL、Redis、Kafka、nginx
 
@@ -161,6 +218,9 @@ nearby-life/
   因此从 `backend/` 或仓库根目录启动都能正确定位。换机器或部署时可用环境变量
   `HMDP_UPLOAD_DIR`（或配置项 `hmdp.upload.dir`）指定绝对路径。实现见
   `backend/src/main/java/com/hmdp/config/UploadProperties.java`。
+- **Docker 数据卷**：`mysql_data`、`kafka_data`、`imgs` 三个命名卷保存运行期数据。
+  `imgs` 卷首次创建时由镜像内置的种子图初始化，之后用户上传的图片落在同一卷里，
+  重建容器不会丢；要重置请用 `docker compose down -v`。
 - **不要提交密码**：`application-local.yaml`、`*.env` 等已在 `.gitignore` 中忽略。
 - `frontend/html/hmdp/imgs/blogs/` 下仅有 `hmdp.sql` 引用的 13 张种子图入库，
   运行期上传的图片不入库。
@@ -172,7 +232,7 @@ nearby-life/
 - [ ] 秒杀消费端幂等（唯一索引 + 幂等表）、失败重试与死信队列
 - [ ] 补全接口鉴权覆盖，修复图片删除接口的路径校验
 - [ ] 引入 Testcontainers 集成测试（秒杀并发、缓存击穿、鉴权）
-- [ ] Docker Compose 一键启动 MySQL / Redis / Kafka / nginx
+- [x] Docker Compose 一键启动 MySQL / Redis / Kafka / nginx（见 `docker-compose.yml`）
 - [ ] 升级至 Spring Boot 3.x / Java 21
 - [ ] 接入 SpringDoc 自动生成接口文档
 
